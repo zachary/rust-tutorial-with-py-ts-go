@@ -1,0 +1,22 @@
+{
+  "//": "对应 Rust 项目中的 Cargo.toml (name = \"cli\", version = \"0.1.0\", license = \"MIT\")",
+  "//deps": "Rust 依赖的 clap / serde / serde_json 在 TypeScript 中由手写的参数解析与 JSON 模块替代, 运行时没有任何依赖",
+  "name": "cli",
+  "version": "0.1.0",
+  "description": "one simple Rust tutorial",
+  "author": "inksha <admin@inksha.com>",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=23.6.0"
+  },
+  "scripts": {
+    "start": "node src/main.ts",
+    "test": "node --test src/todo/core.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.6.0"
+  }
+}

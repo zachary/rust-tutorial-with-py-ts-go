@@ -1,0 +1,34 @@
+# 对应 Rust 项目中的 Cargo.toml
+#
+#	name = "cli"
+#	version = "0.1.0"
+#	edition = "2021"
+#	authors = ["inksha <admin@inksha.com>"]
+#	description = "one simple Rust tutorial"
+#	license = "MIT"
+#
+# Rust 依赖的 clap / serde / serde_json 在 Python 中由标准库的
+# 参数解析方式与 json 模块替代, 因此这里没有任何第三方依赖.
+
+[project]
+name = "cli"
+version = "0.1.0"
+description = "one simple Rust tutorial"
+authors = [{ name = "inksha", email = "admin@inksha.com" }]
+license = "MIT"
+# 需要 3.10 及以上: core.TodoCommand 使用联合类型表示枚举变体,
+# main 中使用 match 语句解构 (对应 Rust 的模式匹配).
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+cli = "main:main"
+
+[build-system]
+requires = ["setuptools>=77.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+py-modules = ["main"]
+packages = ["todo"]

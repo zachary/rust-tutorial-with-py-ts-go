@@ -13,6 +13,8 @@ Rust 则恰恰相反, 它从语言设计层面 “不信任开发者”, 认为 
 
 本文将通过带领读者实现一个简单用于记录 Todo 事项的 CLI (Command Line Interface, 命令行接口) 程序来学习 Rust。
 
+除此之外, 仓库中还提供了同一程序的 [Go、Python 与 TypeScript 实现](#其他语言的实现), 方便对照学习不同语言对同一套设计的表达方式。
+
 ## 初始准备
 
 首先通过 [Rust 官网](https://www.rust-lang.org/zh-CN/learn/get-started) 获取 Rust 安装包。
@@ -2348,6 +2350,155 @@ Todo 项数据仅包含标题和内容, 缺少状态标记（如 “已完成”
 
 我们可以尝试通过扩展功能、优化实现, 我们可以进一步巩固 Rust 的模式匹配、错误处理、枚举设计等知识点。
 真正将 “内存安全”“高性能” 的特性融入实际开发中, 让这个简单的工具逐渐成长为一个实用、健壮的生产力工具。
+
+## 其他语言的实现
+
+同一个 Todo CLI, 仓库中还提供了 Go、Python 与 TypeScript 三份等价实现,
+分别位于 `golang/`、`python/` 与 `typescript/` 目录下。
+
+这些实现尽可能与 Rust 版本保持相同的目录结构、函数与结构体命名以及执行流程,
+并使用与 Rust 版本完全相同的 `todo.json` 格式, 四种实现可以互相读写同一份数据。
+
+### 目录结构
+
+Go 版本的目录结构如下:
+
+```sh
+# golang 目录结构
+- go.mod                    # 对应 Cargo.toml
+- src
+  - main.go                 # 对应 src/main.rs
+  - todo
+    - todo.go               # 对应 src/todo.rs, 仅声明子模块
+    - core
+      - core.go             # 对应 src/todo/core.rs
+      - core_test.go        # 对应 src/todo/core.rs 中的 #[cfg(test)] mod tests
+    - create
+      - create.go           # 对应 src/todo/create.rs
+    - list
+      - list.go             # 对应 src/todo/list.rs
+    - storage
+      - storage.go          # 对应 src/todo/storage.rs
+```
+
+Python 版本的目录结构如下。Python 中目录本身就是一个包,
+因此 `todo/__init__.py` 相当于只做模块声明的 `src/todo.rs`:
+
+```sh
+# python 目录结构
+- pyproject.toml            # 对应 Cargo.toml
+- src
+  - main.py                 # 对应 src/main.rs
+  - todo
+    - __init__.py           # 对应 src/todo.rs, 声明子模块
+    - core.py               # 对应 src/todo/core.rs, 含内联单元测试
+    - create.py             # 对应 src/todo/create.rs
+    - list.py               # 对应 src/todo/list.rs
+    - storage.py            # 对应 src/todo/storage.rs
+```
+
+TypeScript 版本的目录结构如下。TypeScript 同样没有模块声明文件,
+`todo/todo.ts` 通过命名空间重导出承担 `src/todo.rs` 的职责:
+
+```sh
+# typescript 目录结构
+- package.json              # 对应 Cargo.toml
+- tsconfig.json             # 编译器配置
+- src
+  - main.ts                 # 对应 src/main.rs
+  - todo
+    - todo.ts               # 对应 src/todo.rs, 声明子模块
+    - core.ts               # 对应 src/todo/core.rs
+    - core.test.ts          # 对应 src/todo/core.rs 中的 #[cfg(test)] mod tests
+    - create.ts             # 对应 src/todo/create.rs
+    - list.ts               # 对应 src/todo/list.rs
+    - storage.ts            # 对应 src/todo/storage.rs
+```
+
+### 运行与测试
+
+```bash
+# Go 实现, 需要 go 1.27 及以上 (SetTitle 中的泛型方法对应 Rust 的泛型参数)
+cd golang
+go run ./src --help
+go run ./src create --title t --content c
+go run ./src list --title rust
+go test ./...           # 单元测试
+go build -o cli ./src   # 构建二进制
+
+# Python 实现, 需要 python 3.10 及以上 (联合类型与 match 语句)
+cd python
+python3 src/main.py --help
+python3 src/main.py create --title t --content c
+python3 src/main.py list --title rust
+python3 src/todo/core.py                      # 单元测试
+PYTHONPATH=src python3 -m unittest todo.core  # 也可以用 unittest 运行
+
+# TypeScript 实现, 需要 node 23.6 及以上 (原生支持直接运行 TypeScript)
+cd typescript
+node src/main.ts --help
+node src/main.ts create --title t --content c
+node src/main.ts list --title rust
+node --test src/todo/core.test.ts   # 单元测试 (npm test)
+npm run typecheck                   # 类型检查 (需要先执行 npm install)
+```
+
+三份实现都支持与 Rust 版本相同的参数形式: `-t/--title`、`-c/--content`、`--title=value`,
+以及 `--help`、`--version` 与 `help` 子命令。
+
+### 与 Rust 的对照
+
+| Rust | Go | Python | TypeScript |
+| --- | --- | --- | --- |
+| `struct Program` + `Program::parse()` | `Program` + `(*Program).Parse()` | `Program` + `Program.parse()` | `Program` + `Program.parse()` |
+| `enum TodoCommand` 变体携带数据 | `TodoCommand{Command, Title, Content}` | `Create` 与 `List` 数据类组成的联合类型 | 带判别字段 `kind` 的联合类型 |
+| `Option<String>` | `*string` (nil 即 None) | `str \| None` | `string \| null` |
+| `struct TodoItem` + serde 派生宏 | `TodoItem` + json 标签 | `@dataclass TodoItem` | `class TodoItem` + `JSON.stringify` |
+| `TodoItem::new` / `create_todo_item` | `NewTodoItem` / `CreateTodoItem` | `TodoItem.new` / `create_todo_item` | `TodoItem.new` / `createTodoItem` |
+| `trait Serializer` 的默认实现 | `Serializer` 接口 + `Deserialize[T]` 泛型函数 | `Serializer` 抽象基类 + 继承 | `Serializer` 抽象基类 + `extends` |
+| `match args.command { .. }` | `switch program.Command.Command` | `match program.command: case Create(..)` | `switch (command.kind)` 加解构 |
+| `create_todo(&mut todos, ..)` | `CreateTodo(&todos, ..)` | `create_todo(todos, ..)` | `createTodo(todos, ..)` |
+| `set_title<T: Into<String>>` | `SetTitle[T ~string]` | `set_title(title: str)` | `setTitle(title: string)` |
+| `save_todo_list` 返回 `Result<(), String>` | 返回 `error` | 抛出 `OSError` | 抛出异常 |
+| `#[cfg(test)] mod tests` | `core_test.go` | `core.py` 中内联的 `TodoItemTest` | `core.test.ts` |
+
+### 实现要点
+
+三者的类型系统并不相同, 因此转换时做了如下取舍:
+
+- 枚举: Rust 的枚举变体可以携带数据, Go 没有枚举, 因此使用类型常量配合一个结构体表示;
+  Python 用一个数据类表示一个变体, 再用联合类型表示整个枚举, 并在 `main` 中用 `match` 语句解构;
+  TypeScript 使用带判别字段的联合类型 (discriminated union), 在 `main` 中通过 `switch` 加解构对应模式匹配。
+- 可选值: `Option<String>` 在 Go 中对应 `*string`, 在 Python 中对应 `str | None`, 在 TypeScript 中对应 `string | null`。
+- 特征: Rust 的 trait 可以为类型提供默认实现, Go 的接口不能, 因此 Go 中用接口约束类型,
+  再用泛型函数 `Deserialize[T]` 提供默认实现; Python 与 TypeScript 的抽象基类可以直接给出默认实现, 对应得最自然。
+- 错误处理: `save_todo_list` 返回的 `Result<(), String>` 在 Go 中对应 `error`, 在 Python 与 TypeScript 中对应异常。
+- 命令行解析: 三者都没有 clap 的派生宏, 因此手动实现了解析 `-t/--title` 等参数的逻辑,
+  并保持帮助文案与退出码 (`--help` 退出 0, 参数错误退出 2) 与 clap 一致。
+- 序列化: 三者都使用与 `serde_json` 相同的紧凑格式 (`,` 与 `:` 后不加空格, 非 ASCII 字符不转义),
+  因此写出的 `todo.json` 与 Rust 版本逐字节一致。
+
+各语言额外需要处理的问题:
+
+- Go: 没有枚举与可选值, 因此用类型常量加结构体、用指针表达 `Option`; 没有 trait 的默认方法,
+  因此用接口约束类型、用泛型函数提供默认实现。
+- Python: 没有“多行输入”原语, 使用 `input()` 读取;
+  同时 `list`、`filter` 是内置名称, 作为参数名会遮蔽它们, 因此重命名为 `todos`、`item_filter`。
+- TypeScript: 类型在运行时会被擦除, 因此 `storage.ts` 中显式校验了字段类型,
+  才能在数据不合法时像 serde 那样打印 `parse file error`;
+  Node 读取标准输入通常是异步的, 为了保持 `create_todo` 的同步流程,
+  `create.ts` 中使用 `fs.readSync` 并自行维护缓冲区按行切分。
+
+三处有意为之的差异:
+
+- Python 使用 `input()` 读取输入, 它不含行尾的换行符, 因此空白行会重新提示输入
+  (Rust 的 `read_line` 会保留换行符, 使得该判断实际上只在读取到结尾时成立)。
+- Go 与 TypeScript 保留了 Rust 的按行读取语义 (包含换行符, 空白行会得到空字符串),
+  但读取到输入结尾时不再像 Rust 那样空转, 而是与 `.expect("read line failed")` 一致地抛出异常/错误。
+- Go 与 Python 中都存在会遮蔽内置名称的标识符 (`list`、`filter`), 已重命名; TypeScript 中无需重命名, 保留了 Rust 的原始名称。
+
+> 注意: 各实现的数据文件同样是当前工作目录下的 `todo.json`,
+> 因此在 `golang/`、`python/` 或 `typescript/` 目录下运行会生成该目录下的 `todo.json` (与仓库根目录的那份互不影响)。
 
 ## 参考内容
 

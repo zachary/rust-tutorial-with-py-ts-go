@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    // 与 Rust 的 edition = "2021" 对应的现代目标
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    // 直接使用 node 运行 .ts 文件, 因此不需要编译产物 (对应 cargo run 无需生成文件)
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "types": ["node"],
+    // Rust 编译期检查的等价物: 尽可能严格
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"]
+}
