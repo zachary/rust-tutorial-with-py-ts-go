@@ -6,22 +6,22 @@ Rust is a systems programming language that has grown rapidly in recent years.
 
 It combines high performance with memory safety, and is widely used in embedded systems, operating systems, WebAssembly, backend services, and command-line tools.
 
-C "trusts that you know what you are doing", which is why it lets you manipulate memory and pointers with almost no restrictions.
+C "trusts that you know what you are doing", and therefore lets you manipulate memory and pointers with almost no restrictions.
 Rust is the exact opposite: at the language design level it "does not trust developers" and assumes "you will make a mistake sooner or later".
 
 For this reason, Rust introduced the ownership system, borrow checking, and lifetimes, so that code which "might break in the future" is kept out at compile time.
-This also means that while writing code, developers often need to take the time to understand these mechanisms and work to "convince" the compiler to accept their writing.
-Although the process is winding, what you get in the end is a more robust and safer program.
+It also means that while writing code, developers often have to spend time understanding these mechanisms and work to "convince" the compiler to accept their code.
+The process is winding, but what you end up with is a more robust and safer program.
 
 In this tutorial we will learn Rust by building a simple CLI (Command Line Interface) program for recording Todo items.
 
 On top of that, the repository also provides the same program [implemented in Go, Python, and TypeScript](#implementations-in-other-languages), so you can compare how different languages express the same design.
 
-## Getting Prerequisites Ready
+## Prerequisites
 
 First, get the Rust installer from the [official Rust website](https://www.rust-lang.org/learn/get-started).
 
-Then follow the official documentation to set up the environment.
+Then follow the official documentation to set up your environment.
 
 Once installation is complete, you can initialize a project with `cargo init`.
 
@@ -84,9 +84,9 @@ fn main() {
 }
 ```
 
-Our CLI records Todo items, so we need to be able to input content.
+Our CLI records Todo items, so we need a way to take input.
 
-The Rust standard library provides `std::env` for obtaining environment information. It offers an `args` function that returns the command-line arguments.
+The Rust standard library provides `std::env` for reading environment information. It offers an `args` function that returns the command-line arguments.
 
 Change `main.rs` to the following:
 
@@ -110,9 +110,9 @@ Run `cargo run -- a b` on the command line, and the result is:
 ]
 ```
 
-As you can see, the input we get is in array form, and its first item is the path to our executable.
+As you can see, the input comes back as an array, and its first item is the path to our executable.
 
-What we need is the input content, namely `a` and `b`.
+What we want is the input itself, namely `a` and `b`.
 
 ```rust
 fn main() {
@@ -125,7 +125,7 @@ fn main() {
 }
 ```
 
-Run `cargo run -- a b`. You will find that it reports an error:
+Run `cargo run -- a b` and you will see an error:
 
 ```bash
 error[E0507]: cannot move out of index of `Vec<String>`
@@ -169,7 +169,7 @@ cannot move out of index of `Vec<String>`
 move occurs because value has type `String`, which does not implement the `Copy` trait
 ```
 
-It means: a value cannot be taken out of a `Vec<String>`, because the `String` type does not implement the `Copy` trait and therefore cannot be copied implicitly.
+It means a value cannot be moved out of a `Vec<String>`, because the `String` type does not implement the `Copy` trait and therefore cannot be copied implicitly.
 
 As mentioned earlier:
 
@@ -177,7 +177,7 @@ As mentioned earlier:
 >
 > For this reason, Rust introduced the ownership system, borrow checking, and lifetimes, so that code which "might break in the future" is kept out at compile time.
 
-This problem is caused by the ownership system that Rust introduced.
+This error comes from the ownership system Rust introduced.
 
 According to the Rust ownership rules:
 
@@ -187,16 +187,16 @@ According to the Rust ownership rules:
 
 With that, the error above is easy to understand.
 
-We try to take a value out of the `Vec<String>` type, but according to the ownership principle, every value can have only one owner.
+We are trying to move a value out of `Vec<String>`, but according to ownership, every value can have only one owner.
 Therefore `Vec<String>` owns all the `String` elements inside it.
 
-When we access an element such as `args[1]`, we are in fact trying to "move" the ownership of that element to another variable. That violates the ownership rules,
-because `args` may still be used later; if the ownership of an element were moved away, its internal state would become inconsistent, and problems such as dangling pointers or double frees could appear.
+When we access an element such as `args[1]`, we are in fact trying to "move" the ownership of that element to another variable. That breaks the ownership rules,
+because `args` may still be used later; if an element's ownership were moved out, its internal state would become inconsistent, and problems such as dangling pointers or double frees could follow.
 
 ### References and Borrowing
 
 Rust "does not trust developers" at the language design level, so it adopts the ownership system to enforce memory safety.
-Because of this, the compiler is very "smart": it not only tells you where the error is, but also offers suggestions for fixing it.
+Because of this, the compiler is quite "smart": it not only tells you where the error is, but also suggests how to fix it.
 
 For example, the compilation error below gives two possible solutions:
 
@@ -213,20 +213,20 @@ help: consider cloning the value if the performance cost is acceptable
 
 The first approach is `let title = &args[1];`, which borrows the value of `args[1]` instead of moving its ownership.
 This approach is efficient and does not copy data, but the type of the variable becomes `&String`, meaning it is a reference to a `String` value.
-Therefore it is constrained by the referenced object: when `args` becomes invalid, its reference becomes invalid too.
+As a result it is bound to the borrowed value: once `args` is gone, the reference is no longer valid.
 
 The second approach is `let title = args[1].clone();`, which clones the value of `args[1]`
-and moves that value into the `title` variable, so that when `args` becomes invalid, using `title` is not affected.
+and moves that value into the `title` variable, so that `title` stays usable even after `args` is gone.
 
-Therefore we choose the second approach, explicitly calling the `clone` method to clone a copy of `args[1]`.
+So we pick the second approach and call `clone` explicitly to make a copy of `args[1]`.
 
-> Creating a reference is called borrowing. A reference is the result of that borrowing.
+> The act of creating a reference is called borrowing, and the reference is the result of that act.
 
-Running `cargo run -- a b` again, we can see that it compiles.
+Running `cargo run -- a b` again shows that it now compiles.
 
 ### Mutable Variables
 
-In the current implementation, every run of the program requires two arguments (title and content), otherwise the program reports an error due to out-of-bounds indexing.
+In the current implementation, every run requires two arguments (title and content); otherwise the program fails with an out-of-bounds index error.
 To make the program more robust, we can set default values for missing arguments.
 
 Modify the code:
@@ -246,9 +246,9 @@ fn main() {
 }
 ```
 
-In the code above we check the input arguments: as soon as the number of arguments is greater than 2, the third argument is used as the content; otherwise the default value is used.
+Here we check the arguments: when there are more than two, the third is used as the content; otherwise the default is kept.
 
-Executing `cargo run -- a`, we find another error.
+Running `cargo run -- a` gives us another error.
 
 ```bash
 error[E0384]: cannot assign twice to immutable variable `content`
@@ -266,10 +266,10 @@ help: consider making this binding mutable
    |       +++
 ```
 
-This is because, for the sake of safety and readability, Rust makes all variables immutable by default.
-The error means: you cannot assign to the immutable variable `content` a second time, unless it is declared mutable.
+For safety and readability, Rust makes variables immutable by default.
+The error says that you cannot assign to the immutable variable `content` a second time unless you declare it mutable.
 
-The compiler has already given us the hint. Just add the `mut` keyword after `let`.
+The compiler already hints at the fix: add the `mut` keyword after `let`.
 
 ```rust
 fn main() {
@@ -286,7 +286,7 @@ fn main() {
 }
 ```
 
-Executing `cargo run -- a` again, it runs successfully.
+Running `cargo run -- a` again succeeds.
 
 ### Variable Types
 
@@ -297,9 +297,8 @@ There are two ways to determine a type: explicit declaration and implicit infere
 Explicit declaration uses `:` after the variable name to specify the type.
 For example: `let args: Vec<String> = std::env::args().collect();` specifies the type of the variable `args` as `Vec<String>`.
 
-Implicit inference means the compiler infers the type of a variable from its value and context.
-Rust has a powerful type inference mechanism, so in most cases we do not need to annotate types manually.
-The compiler infers types automatically, and manual annotation is needed only when it cannot.
+Implicit inference means the compiler works the type out from the value and its context.
+Rust's inference is powerful, so in most cases we do not need to annotate types manually; only when the compiler cannot infer a type do we have to.
 
 For example, in the code below we do not explicitly declare the types of `len`, `title`, or `content`, yet their types are still definite:
 
@@ -319,24 +318,24 @@ Rust supports the usual primitive types:
 - Characters: `char`
 
 Note that in Rust, `"xxx"` is a string literal slice whose type is `&str`, fixed and immutable at compile time.
-`String`, on the other hand, is a string type allocated dynamically at compile time with a variable length.
+`String`, by contrast, is a growable string type whose length can change at runtime.
 
-The `args` we used earlier is a `Vec<String>`, which is a collection of dynamic strings.
+The `args` we used earlier is a `Vec<String>`, a collection of dynamic strings.
 
 ## Control Flow
 
-Control flow means controlling the flow of a program.
+Control flow is how you steer the flow of a program.
 
 Without control flow, a program executes line by line, from top to bottom.
 Control flow statements let us selectively execute a block of code based on a condition, or repeatedly execute a block of code,
-which gives a program the ability to make decisions and loop.
+which gives a program the ability to decide and to loop.
 
 ### if/else Branches
 
 `if`/`else` is the most commonly used control flow statement in Rust.
 
-It is used to test whether a condition holds.
-Its condition must return a boolean value, not any other type.
+It tests whether a condition holds.
+That condition must be a boolean value, not any other type.
 
 If the condition holds, the code block after `if` is executed.
 If the condition does not hold, the code block after `else` is executed.
@@ -362,8 +361,8 @@ Note that `if` in Rust is an expression, so it is allowed to return a value. The
   };
 ```
 
-The code above means: if the condition `len > 2` holds, use `args[2].clone()` as the value of `content`;
-otherwise, use `String::from("default content")` as the value of `content`.
+The code above means: if `len > 2` holds, `content` gets `args[2].clone()`;
+otherwise it gets `String::from("default content")`.
 
 > Rust is an expression-oriented language; in fact most constructs can return a value.
 
@@ -375,7 +374,7 @@ In Rust, the looping constructs are:
 - A `while` loop runs as long as its condition holds.
 - A `for` loop iterates over every element of a collection.
 
-We will use `while` to implement an interactive command-line input that collects the Todo title and content step by step, and asks for confirmation before creating the Todo.
+We will use `while` to build an interactive command-line flow that collects the Todo title and content step by step, then asks for confirmation before creating the Todo.
 
 Modify the code in `main.rs` as follows:
 
@@ -445,10 +444,10 @@ fn main() {
 }
 ```
 
-In the code above, we use a `while` loop to build an interactive command-line program for creating Todo items.
+Here we use a `while` loop to build an interactive command-line program for creating Todo items.
 
-We use a state variable `ok` to control the loop: when `ok` is `false`, the loop ends.
-And when the content entered by the user is empty, we use the `continue` statement to skip the current iteration.
+A state variable `ok` controls the loop: when `ok` is `false`, the loop ends.
+When the user enters nothing, the `continue` statement skips the current iteration.
 
 If it were changed to a `loop`, it would look like this:
 
@@ -468,14 +467,14 @@ loop {
 }
 ```
 
-Both `while` and `loop` can be used for looping, and their effect can be said to be equivalent.
+Both `while` and `loop` can drive a loop, and the two are effectively equivalent.
 
 The difference between them is:
 
 - `while` suits condition-driven loops, such as reading user input and confirming it.
 - `loop` suits cases with more complex structure where the loop must be controlled manually, for example game development.
 
-Now, executing `cargo run -- create` takes you into an interactive interface for creating Todo items.
+Now `cargo run -- create` takes you into an interactive flow for creating Todo items.
 
 ### for Loops
 
@@ -508,7 +507,7 @@ fn main() {
 }
 ```
 
-Compared with `while` and `loop`, which require manual index management, `for` iterates over a collection more concisely and safely.
+Unlike `while` and `loop`, which make you manage the index by hand, `for` iterates over a collection more concisely and safely.
 It is the preferred way to process collections in Rust.
 
 ## Slices and Arrays
@@ -523,40 +522,40 @@ while a string of type `&str` is a statically sized string whose length is fixed
 
 ### Slices
 
-A slice lets you reference part of a collection's consecutive elements instead of the whole collection. The `&str` type is exactly a string slice.
+A slice lets you reference consecutive elements of a collection instead of the whole thing. The `&str` type is exactly a string slice.
 
 The slice syntax is `&[start..end]`, where `start` is the starting position of the slice and `end` is the ending position.
 Note that the slice range is half-open: it includes the `start` position and excludes the `end` position.
 
 For example: with `let s = "hello world";`, `s` is a string slice whose type is `&str`.
-`&s[0..5]` means taking the first 5 characters of the string `s`, namely `"hello"`.
+`&s[0..5]` takes the first 5 characters of `s`, namely `"hello"`.
 
-The bounds can be omitted: from zero it can be written as `&s[..5]`, and to the end as `&s[6..]`.
+Either bound can be omitted: from the start as `&s[..5]`, to the end as `&s[6..]`.
 
 > Rust strings are UTF-8 encoded, so a slice must be cut at valid character boundaries, otherwise the program will panic.
 
-Slices are a very common feature: they avoid copying, which improves efficiency, and they provide a flexible view over data.
+Slices are extremely common: they avoid copying, which is faster, and they give you a flexible view over the data.
 
 ### Arrays
 
-Arrays in Rust also have a fixed length at compile time, require all elements to be of the same type, and offer high performance. They are defined with `let var: [type; length] = [];`.
+Arrays in Rust also have a fixed length at compile time, require every element to be of the same type, and are fast. They are defined with `let var: [type; length] = [];`.
 For example: `let arr: [i32; 5] = [1, 2, 3, 4, 5];` declares an array of type `i32` with length 5.
 
-If you need a dynamic array, Rust provides the dynamic array `Vec<T>`, whose length can change at runtime. It is commonly used for a variable amount of data, such as user input and command-line arguments.
+If you need a dynamic array, Rust provides `Vec<T>`, whose length can change at runtime. It is commonly used for data of unknown size, such as user input and command-line arguments.
 The `Vec<String>` we used earlier is exactly such a dynamic array whose element type is `String`.
 
 ## Pattern Matching
 
-At the moment our CLI program contains two commands:
+At the moment our CLI program has two commands:
 
 - `create`: create a Todo item.
 - `list`: view the Todo list.
 
-But as the features grow, the code gradually becomes bloated and hard to maintain.
+But as features are added, the code grows bloated and hard to maintain.
 
 To solve this problem, Rust offers a more elegant and powerful approach: pattern matching with `match`.
 
-We can use `match` to match against the input and run the corresponding logic for each match.
+We can use `match` to match the input and run the logic that corresponds to each case.
 
 ```rust
 fn main() {
@@ -588,14 +587,14 @@ fn main() {
 }
 ```
 
-From the code above it is not hard to see that `match` resembles `switch` in other languages,
-but Rust's `match` is more powerful than `switch`. It can:
+As the code above shows, `match` resembles `switch` in other languages,
+but Rust's `match` is far more powerful. It can:
 
 - Match multiple possible values.
 - Support variable binding and destructuring.
-- Cover all cases by requirement, while allowing `_` to match everything.
+- Be required to cover every case, while allowing `_` to match everything.
 - Be an expression at the same time, so it can return a value.
-- Support guard conditions, adding extra constraints with `if`.
+- Support guard conditions that add extra constraints with `if`.
 
 Here is a simple example:
 
@@ -614,9 +613,9 @@ let role = match auth_level {   // the value is returned to the variable declara
 
 Right now, a Todo item has two separate attributes: Title and Content.
 
-To express the relationship between them better, we can organize them together with a Rust struct.
+To express the relationship between them better, we can group them together with a Rust struct.
 
-A struct is a data type we can define ourselves. It packs multiple fields together into one whole, which makes them easier to manage, pass around, and extend.
+A struct is a data type we define ourselves. It packs multiple fields into one whole, which makes them easier to manage, pass around, and extend.
 
 Rework `main.rs`.
 
@@ -651,17 +650,17 @@ fn main() {
 }
 ```
 
-In the code above we defined a struct named `TodoItem`, containing the two attributes `title` and `content`, which represent the title and content of a Todo item.
+In the code above we defined a struct named `TodoItem` with the two fields `title` and `content`, which hold the title and content of a Todo item.
 
-In the `main` function we use a `Vec<TodoItem>` to store multiple Todo items, and each Todo item is an instance of the struct.
+In `main` we use a `Vec<TodoItem>` to store multiple Todo items, each of which is an instance of the struct.
 
-When the `"list"` command is matched, we iterate over the `todos` list and print the title and content of each Todo, implementing a simple viewing feature.
+When the `"list"` command matches, we iterate over `todos` and print the title and content of each Todo: a simple listing feature.
 
 ## Functions
 
-In the earlier code we defined the `todos` variable to store Todo items, and instantiated Todo items one by one before adding them to `todos`.
+In the earlier code we used the `todos` variable to store Todo items, instantiating each item and pushing it into `todos` by hand.
 
-The code that instantiates a Todo item looks like this, and as you can see, it is a bit tedious:
+Instantiating a Todo item looks like this, which is tedious:
 
 ```rust
 TodoItem {
@@ -670,15 +669,15 @@ TodoItem {
 }
 ```
 
-To avoid writing the same conversion and construction over and over, we can use Rust functions.
+To avoid repeating the same conversions and construction every time, we can use Rust functions.
 
-A function is a block of code that can be called repeatedly, used to accomplish a specific task. It can:
+A function is a block of code that can be called repeatedly to accomplish a specific task. It can:
 
 - Isolate a piece of functionality so it can be reused, avoiding duplicated code.
 - Describe its purpose through its name, making the code structure clear and improving readability.
-- Require changes only inside the function, without affecting external callers, which improves maintainability and extensibility.
+- Confine changes to the function body, without affecting callers, which improves maintainability and extensibility.
 - Change its internal behavior and implement different functionality by passing different arguments.
-- Return a value, enabling interaction between the outside and the inside.
+- Return a value, so the inside can talk back to the outside.
 
 ```rust
 fn create_todo_item(title: &str, content: &str) -> TodoItem {
@@ -699,21 +698,21 @@ fn main() {
 ```
 
 In the example above, `create_todo_item` takes two arguments of type `&str` and returns a value of type `TodoItem`.
-Inside it, the two `&str` arguments are converted into `String` values and bound to an instance of type `TodoItem`.
+Inside, the two `&str` arguments are converted into `String` values and bound to a `TodoItem` instance.
 
-After that, we only need `create_todo_item("title", "content");` to instantiate a value of type `TodoItem`.
+After that, `create_todo_item("title", "content")` is all we need to instantiate a `TodoItem`.
 
-Compared with the earlier approach of manually specifying the struct type, listing every field, and converting each string one by one, using a function greatly reduces duplicated code and improves development efficiency.
+Compared with spelling out the struct type, listing every field, and converting each string by hand, a function cuts the duplication and speeds up development.
 
-By encapsulating the `create_todo_item` function, we only need to pass in the title and content to quickly create a `TodoItem` instance, which is both concise and easy to read and maintain.
+With `create_todo_item` in place, passing in a title and content is enough to create a `TodoItem`, which is concise and easy to read and maintain.
 
-This style of encapsulation is very common in real development, and it reflects the core idea of function abstraction: hide the implementation details and expose a clear interface.
+This style of encapsulation is common in real projects, and it captures the core idea of function abstraction: hide the details, expose a clear interface.
 
 ### Function Return Values
 
 In `create_todo_item` we used the `return` keyword to return an instance of type `TodoItem`.
 
-But in fact, we do not need the `return` keyword at all. The function can be changed to:
+In fact we do not need the `return` keyword at all. The function can be written as:
 
 ```rust
 fn create_todo_item(title: &str, content: &str) -> TodoItem {
@@ -724,15 +723,15 @@ fn create_todo_item(title: &str, content: &str) -> TodoItem {
 }
 ```
 
-Removing the trailing `;` makes it possible to return data. That is because Rust takes the value of the last expression in the function body as the return value by default.
-By removing the trailing `;`, we turn a statement into an expression, so Rust can use the value of that expression as the return value.
+Dropping the trailing `;` is what makes this work: Rust takes the value of the last expression in the function body as the return value.
+Removing the `;` turns a statement into an expression, and the value of that expression becomes the return value.
 
 The `return` keyword is needed only when you want to return early.
 
 ### Tuples
 
-A tuple is a compound type formed by combining multiple types. Both its length and its order are fixed.
-We can simply think of a tuple as an array whose type order cannot be changed.
+A tuple is a compound type formed by combining several types. Its length and order are fixed.
+You can think of a tuple as an array whose types cannot be reordered.
 
 ```rust
 let tup: (i32, f64, &str) = (1, 1.0, "1");
@@ -746,7 +745,7 @@ let b = tup.1
 let c = tup.2
 ```
 
-They are often used to wrap multiple values and hand them to other places.
+They are often used to wrap several values and hand them somewhere else.
 
 ### The Unit Type
 
@@ -755,14 +754,14 @@ It is actually a special tuple, but note that a tuple in Rust must never be empt
 
 Usually, the unit type is used to mean "no return value".
 
-A function with no return value is in fact equivalent to returning an empty tuple `()` by default.
+A function that returns nothing is in fact equivalent to returning the empty tuple `()` by default.
 
 ## Modules
 
-As the program grows more complex, our `main.rs` file accumulates more and more code, with all the logic piled together, which hurts readability and makes maintenance and extension harder.
+As the program grows, `main.rs` accumulates more and more code, all the logic piled together, which hurts readability and makes maintenance and extension harder.
 
-In Rust, modularization is a common way to organize code: split the code into multiple files and let each file take care of a different piece of functionality.
-That makes the code structure clearer and the division of responsibilities explicit.
+In Rust, modularizing is a common way to organize code: split it into multiple files, each responsible for one piece of functionality.
+That keeps the structure clear and the division of responsibilities explicit.
 
 At the moment, our project structure looks like this:
 
@@ -810,7 +809,7 @@ pub fn get_todo_list() -> Vec<TodoItem> {
 }
 ```
 
-In the code above you can see that whether it is a struct or a function, there is a `pub` keyword before its declaration. `pub` means the struct or function is public and other modules can access it.
+Here, every struct and function is preceded by the `pub` keyword, which marks it as public so that other modules can access it.
 
 In Rust, everything is private by default; without `pub`, the item can only be accessed inside the current module.
 
@@ -899,17 +898,16 @@ pub fn list_todo(todos: &Vec<TodoItem>) {
 }
 ```
 
-In the code above you can see the statement `use super::core::TodoItem;`.
-It is importing content from another module.
+The statement `use super::core::TodoItem;` imports an item from another module.
 
-Rust uses folder-like paths to reference the contents of different modules, and provides three path prefixes:
+Rust references the contents of different modules with folder-like paths, and provides three path prefixes:
 
 - `super`, which means the parent module of the current module.
 - `self`, which means the current module itself.
 - `crate`, which means the current root module, i.e. the `src` directory; for a third-party library, it is replaced by the library name.
 
-Going back to `use super::core::TodoItem;`, we can tell that it imports and uses `TodoItem` from the `core` submodule of the parent module of the `list` module.
-In other words, it brings `TodoItem` in from the sibling module `core`.
+So `use super::core::TodoItem;` imports and uses `TodoItem` from the `core` submodule of the `list` module's parent.
+In other words, it pulls `TodoItem` in from the sibling module `core`.
 
 > Imported content must be made public with the `pub` keyword, otherwise it cannot be imported.
 
@@ -922,16 +920,16 @@ pub mod create;
 pub mod list;
 ```
 
-We can declare submodules with the `mod` keyword. Likewise, a submodule needs the `pub` keyword to be exposed to the outside.
+We can declare submodules with the `mod` keyword. Likewise, a submodule needs the `pub` keyword to be exposed.
 
-In Rust, every module has a `mod.rs` file, which is the entry file of the module.
-In a `mod.rs` file we can define the module's public content, such as structs, functions, and submodules.
+In Rust, a module may have a `mod.rs` file that acts as its entry file.
+There we can define the module's public contents: structs, functions, submodules, and so on.
 
-If the `rustc` version in use is older than 1.30, this is the only way to declare a module entry.
+With `rustc` older than 1.30, this is the only way to declare a module entry.
 
-But from 1.30 onwards, you can create a `.rs` file with the same name as the module, next to the module directory, and use it as the module entry declaration.
+But from 1.30 onwards you can create a `.rs` file named after the module, next to its directory, and use that as the entry declaration.
 
-That is exactly what is used here: a `.rs` file named after the module serves as the module entry declaration.
+That is what we do here: a `.rs` file named after the module serves as the module entry.
 
 Note that a module can also be declared inline, without a separate file.
 
@@ -967,27 +965,27 @@ fn main() {
 
 ## Data Persistence
 
-At the moment our task data is kept in memory. When the program exits, that data disappears with it.
+At the moment our task data lives in memory. When the program exits, the data disappears with it.
 
-To make the user's data available the next time the program starts, we need to persist the data, that is, save it to disk.
+So that the user's data survives into the next run, we need to persist it, that is, save it to disk.
 
-A simple and common approach is to save the data in a file: read the task list from the file when the program starts, and write the updated tasks back to the file when the program exits or the data changes.
+A simple, common approach is to keep the data in a file: read the task list when the program starts, and write the updated tasks back when the program exits or the data changes.
 
-To implement this, we first need to make the data support serialization and deserialization.
+To do that, the data first has to support serialization and deserialization.
 
-- Serialization is converting in-memory objects such as structs into a storable format.
-- Deserialization is converting such a format back into struct objects.
+- Serialization converts in-memory objects such as structs into a storable format.
+- Deserialization converts that format back into struct objects.
 
 ### Adding Dependencies
 
-In real development we usually encapsulate commonly used functionality so it can be reused later.
+In real projects we usually wrap commonly used functionality so it can be reused later.
 
-Going one step further, such functionality can be packaged as a library and published online so others can use it too.
-If a project uses such a library, the project depends on it, which makes it a dependency of the project.
+Take it a step further and such functionality can be packaged as a library and published online for others to use.
+When a project uses such a library, the project depends on it, which makes it a dependency.
 
-`cargo` is Rust's package management tool. We can use it to install the library packages a project depends on.
+`cargo` is Rust's package manager, and we can use it to install the library packages a project depends on.
 
-To make `TodoItem` serialize/deserialize correctly, we need to bring in the third-party libraries `Serde` and `serde_json`.
+To make `TodoItem` serialize and deserialize correctly we need two third-party libraries: `Serde` and `serde_json`.
 
 Run the following commands in the project root directory:
 
@@ -1002,9 +1000,9 @@ cargo add serde_json                  # add the serde_json dependency
 
 ### Implementing Methods for a Struct
 
-In Rust we can use the `impl` keyword to define methods for a struct, organizing the struct and its behavior together.
+In Rust we can use the `impl` keyword to define methods for a struct, keeping the struct and its behavior together.
 
-Let us add creating, serializing, and deserializing methods to `TodoItem`:
+Let us add create, serialize, and deserialize methods to `TodoItem`:
 
 ```rust
 // src/todo/core.rs
@@ -1033,7 +1031,7 @@ impl TodoItem {
 ```
 
 We added the `#[derive(Serialize, Deserialize)]` derive macro to the struct,
-which automatically implements the conversion logic `Serde` needs for `TodoItem`, avoiding the complexity of implementing it by hand.
+which implements the conversion logic `Serde` needs for `TodoItem` automatically, sparing us the complexity of writing it by hand.
 
 In addition, we added:
 
@@ -1041,30 +1039,30 @@ In addition, we added:
 - The `serializer` method: converts the current instance into a JSON string.
 - The `deserializer` method: restores a `TodoItem` instance from a JSON string.
 
-In this way we have given `TodoItem` basic serialization and deserialization. Next, we can use files in the program to save and read task data.
+`TodoItem` now has basic serialization and deserialization, so the program can save and read task data in files.
 
 ### self and Self
 
-In the code above you can see the `self` keyword in the parameter list of the struct's instance methods.
+The `self` keyword appears in the parameter list of the struct's instance methods.
 It refers to the current instance, equivalent to `this` or `self` in other languages.
 
-We can access the attributes of the current instance through `self.title`, `self.content`, and so on.
+We can reach the current instance's fields through `self.title`, `self.content`, and so on.
 
 Other than that, it is no different from any other parameter.
 
-`Self`, on the other hand, refers to the current type. It is equivalent to using the type name directly,
-but it keeps the code unchanged under circumstances such as type renaming, which makes the code more stable and readable.
+`Self`, on the other hand, refers to the current type. It is equivalent to writing the type name directly,
+but it keeps working under circumstances such as a type rename, which makes the code more stable and readable.
 
 ### File Operations
 
-We have now implemented serialization and deserialization for `TodoItem`. Next, we need to store the data in a file to achieve persistence.
+Serialization and deserialization are in place for `TodoItem`. The next step is to store the data in a file to achieve persistence.
 
-Rust provides the standard library `std::fs` for reading and writing files. We will use it to implement the following two features:
+Rust's standard library provides `std::fs` for reading and writing files. We will use it to implement two things:
 
 - Save the Todo list to a file.
 - Read the Todo list into the program.
 
-Add the file `src/todo/storage.rs`, and declare and expose that module in `src/todo.rs`.
+Add the file `src/todo/storage.rs` and declare and expose that module in `src/todo.rs`.
 
 ```rust
 // src/todo/storage.rs
@@ -1141,14 +1139,14 @@ fn main() {
 }
 ```
 
-That way, when we run the following commands:
+Now, running these commands:
 
 ```bash
 cargo run -- list    # show the Todo list (including the initial default content)
 cargo run -- create  # add a Todo item (the change is saved)
 ```
 
-Data is automatically read from and written to `todo.json`, giving us complete local persistence.
+Data is read from and written to `todo.json` automatically, giving us full local persistence.
 
 ## Enums
 
@@ -1162,16 +1160,16 @@ match args[1].as_str() {
 }
 ```
 
-Although simple and intuitive, this string-based matching has the following problems:
+Simple and intuitive as it is, this string-based matching has problems:
 
-- As commands are added, the `match` branches become long-winded.
-- Typos easily cause errors, with no type guarantees.
-- The argument structure of commands is hard to organize and extend uniformly.
+- As commands are added, the `match` arms become long-winded.
+- A typo easily causes an error, with no type guarantees.
+- The arguments of each command are hard to organize and extend uniformly.
 - Help messages such as --help cannot be generated automatically.
 
-To solve this, we will combine Rust enums with the third-party library `clap` to build a CLI program that is easier to maintain and extend.
+To fix this, we will combine Rust enums with the third-party library `clap` to build a CLI that is easier to maintain and extend.
 
-> clap is a powerful Rust library for parsing command-line arguments. It can generate help information for command-line arguments automatically and supports a rich set of argument types and validation rules.
+> clap is a powerful Rust library for parsing command-line arguments. It generates help output automatically and supports a rich set of argument types and validation rules.
 
 Run the following command in the project root directory:
 
@@ -1181,17 +1179,17 @@ cargo add clap --features derive # add the dependency and enable the derive feat
 
 ### Why Use Enums
 
-Enums appear in more or less every programming language.
+Enums show up in more or less every programming language.
 
-Their purpose is to represent a finite set of mutually exclusive possible values, such as Monday through Sunday, or gender.
+They represent a finite set of mutually exclusive values, such as the days of the week or a person's gender.
 
 Compared with enums in other languages, Rust enums are more flexible and powerful:
 
 - Each variant can carry different data.
-- They combine strongly with pattern matching for complex control flow.
-- They can be used together with `trait`s and methods to build rich abstractions.
+- They pair naturally with pattern matching for complex control flow.
+- They work with `trait`s and methods to build rich abstractions.
 
-This makes enums a natural fit for representing the command structure of a CLI: each command corresponds to an enum variant, and each variant carries the arguments it needs.
+That makes enums a natural fit for a CLI's command structure: each command is an enum variant, and each variant carries the arguments it needs.
 
 ### Declaring Enums
 
@@ -1210,8 +1208,8 @@ pub enum TodoCommand {
 }
 ```
 
-The code above defines an enum named `TodoCommand` with two values, `Create` and `List`.
-We used the derive macro `#[derive(Debug, Clone, Subcommand)]` to automatically implement three traits for the enum: `Debug`, `Clone`, and `Subcommand`.
+The code above defines an enum named `TodoCommand` with two variants, `Create` and `List`.
+The derive macro `#[derive(Debug, Clone, Subcommand)]` implements three traits for the enum automatically: `Debug`, `Clone`, and `Subcommand`.
 
 The `Subcommand` trait tells `clap` that this enum corresponds to a subcommand.
 
@@ -1246,13 +1244,13 @@ fn main() {
 }
 ```
 
-In the code above we defined a `Program` struct with a field `command` that receives the subcommand.
+Here we define a `Program` struct with a `command` field that receives the subcommand.
 
-`#[command(version, about, long_about = "Todo Cli")]` tells `clap` to generate the `--version` and `--help` arguments automatically.
+`#[command(version, about, long_about = "Todo Cli")]` tells `clap` to generate `--version` and `--help` automatically.
 
 `#[command(subcommand)]` tells `clap` that this field corresponds to a subcommand.
 
-Running `cargo run -- --help` shows the generated help information:
+Running `cargo run -- --help` shows the generated help output:
 
 ```bash
 Todo Cli
@@ -1274,12 +1272,12 @@ Options:
 
 ### Rust Comments
 
-In the example above, we added doc comments to each variant of TodoCommand.
-But when we run `--help`, the comment content automatically appears in the help information.
+In the example above we added doc comments to each variant of `TodoCommand`.
+But when we run `--help`, that comment text appears in the help output.
 
-This may be puzzling: we only added some comments, so why do they appear in the help output at runtime?
+That may be puzzling: they are only comments, so why do they show up in the help output at runtime?
 
-That is because there are three forms of comments in Rust.
+Because Rust has three forms of comments.
 
 ```rust
 // single-line comment (not parsed by the compiler)
@@ -1299,15 +1297,15 @@ only content within /* */ is commented out
 */
 ```
 
-What we used is `/// xxx`, a doc comment. It is meta-information the compiler can recognize.
-The content of a doc comment is parsed by the compiler and third-party tools as the documentation of the item it is attached to.
+What we used is `/// xxx`, a doc comment. It is meta-information the compiler can read.
+The compiler and third-party tools treat a doc comment as the documentation of the item it is attached to.
 
-`clap` uses its derive macro `#[derive(Subcommand)]` to read the meta-information of structs and enums at compile time, and doc comments are part of that.
-That is why the content of doc comments shows up in the help information printed at runtime.
+`clap` uses its derive macro `#[derive(Subcommand)]` to read the meta-information of structs and enums at compile time, and doc comments are part of it.
+That is why doc comment text shows up in the help output printed at runtime.
 
 ### Enum Variants
 
-Rust enums support carrying data.
+Rust enums can carry data.
 
 Rework `TodoCommand`.
 
@@ -1326,11 +1324,11 @@ pub enum TodoCommand {
 
 We added two fields, `title` and `content`, to the `Create` variant.
 
-They correspond to the `--title` and `--content` arguments respectively.
+They correspond to the `--title` and `--content` arguments.
 
-`#[arg(short, long)]` tells `clap` that the field corresponds to an argument, and specifies its short and long names.
+`#[arg(short, long)]` tells `clap` that the field is an argument and gives it short and long names.
 
-Running `cargo run -- create --help` shows the help information generated automatically:
+Running `cargo run -- create --help` shows the generated help:
 
 ```bash
 Create a new todo item
@@ -1362,7 +1360,7 @@ pub fn create_todo(todos: &mut Vec<TodoItem>, title: String, content: String) {
 }
 ```
 
-Pattern matching is quite powerful: it can destructure the fields of an enum value.
+Pattern matching is powerful enough to destructure an enum variant's fields.
 Modify `main.rs`:
 
 ```rust
@@ -1374,16 +1372,16 @@ Modify `main.rs`:
 // ...
 ```
 
-After that, we can use `cargo run -- create --title t --content c` to create a Todo without entering the interactive interface.
+After that, `cargo run -- create --title t --content c` creates a Todo without entering the interactive flow.
 
 ### Optional Arguments
 
-At the moment, the arguments of our `create` command are all required.
-But that way we cannot tell whether the user wants to create a Todo from command-line arguments or through the interactive interface.
+At the moment, all arguments of our `create` command are required.
+But then we cannot tell whether the user wants to create a Todo from the command line or through the interactive flow.
 
-So we need optional arguments.
+That calls for optional arguments.
 
-Rust provides an enum of type `Option<T>`.
+Rust provides an enum type called `Option<T>`.
 
 ```rust
 pub enum Option<T> {
@@ -1392,7 +1390,7 @@ pub enum Option<T> {
 }
 ```
 
-As you can see, the `Option<T>` enum has two values: `Some(T)` and `None`, representing a value being present or absent.
+As you can see, `Option<T>` has two variants: `Some(T)` and `None`, meaning a value is present or absent.
 
 Change the `TodoCommand` enum to the following:
 
@@ -1437,18 +1435,18 @@ pub fn create_todo(todos: &mut Vec<TodoItem>, title: Option<String>, content: Op
   // ...
 ```
 
-With that rework done, our `create` command can either enter the interactive interface with no arguments, or create a Todo directly from arguments.
+With that rework, `create` can either open the interactive flow with no arguments, or create a Todo straight from arguments.
 
 ### Generics
 
-In the earlier examples we used `Option<String>` to make the arguments optional.
+Earlier we used `Option<String>` to make the arguments optional.
 So where does the `T` in `Option<T>` come from, and why does replacing `T` with `String` make the argument optional?
 
-Because `T` here is a generic. It is not a concrete value, but a placeholder standing for a type that will be specified later.
+Because `T` here is a generic: not a concrete value, but a placeholder for a type that will be specified later.
 
-Rust is a statically typed language with a powerful and flexible type system.
-To guarantee type safety, Rust requires the types of all variables and arguments to be determined at compile time.
-That improves the reliability of the code, but it also brings a problem: we often have to write large amounts of structurally similar code that differs only in type.
+Rust is a statically typed language with a powerful, flexible type system.
+To guarantee type safety, it requires the types of all variables and arguments to be known at compile time.
+That makes code more reliable, but it creates a problem: we often have to write large amounts of near-identical code that differs only in type.
 
 For example, reversing a tuple without generics looks like this.
 
@@ -1464,14 +1462,14 @@ fn reverse_u8_tuple(tuple: (u8, u8)) -> (u8, u8) {
 }
 ```
 
-To solve the problem of duplicated types, many statically typed languages introduced generics, and Rust is no exception.
-Generics let us write general code independent of concrete types, avoiding duplicated work while keeping type safety.
+To avoid that duplication, many statically typed languages introduced generics, and Rust is no exception.
+Generics let us write code that is independent of concrete types, avoiding repeated work while keeping type safety.
 
-When we pass `String` into `Option<T>`, `Option<T>` becomes `Option<String>`. `T` narrows from a broad type to the definite type `String`.
+When we pass `String` to `Option<T>`, `Option<T>` becomes `Option<String>`: `T` narrows from a broad type to the definite type `String`.
 
-Without generics we would need to implement a separate method for each type.
+Without generics we would need a separate method for every type.
 
-But with generics, we only need to append a `<T>` after the item that uses it:
+With generics, we only need to append a `<T>` to the item that uses it:
 
 ```rust
 fn reverse<T>(args: (T, T)) -> (T, T) {
@@ -1480,17 +1478,17 @@ fn reverse<T>(args: (T, T)) -> (T, T) {
 }
 ```
 
-Then we can use the `reverse` method to reverse a tuple of any type.
+Now the `reverse` function can reverse a tuple of any type.
 
 ```rust
 let a = reverse((1, 2));
 let b = reverse(("a", "b"));
 ```
 
-Note that `T` is not a fixed name; it is merely the conventional name for a generic parameter.
-If a developer prefers, a generic can have any name that follows the variable naming rules.
+Note that `T` is not a fixed name; it is only the conventional name for a generic parameter.
+A generic can be given any name that follows the variable naming rules.
 
-The following example shows how to use multiple generics with custom names:
+The example below uses several generics with custom names:
 
 ```rust
 fn reverse<Rust_1, Rust_2>(args: (Rust_1, Rust_2)) -> (Rust_2, Rust_1) {
@@ -1501,7 +1499,7 @@ fn reverse<Rust_1, Rust_2>(args: (Rust_1, Rust_2)) -> (Rust_2, Rust_1) {
 
 ### if let
 
-In the earlier code we pattern matched the optional arguments.
+Earlier we pattern matched the optional arguments.
 
 ```rust
 match title {
@@ -1514,11 +1512,11 @@ match title {
 }
 ```
 
-Although it works, the code is a bit long-winded, especially when we only care about one specific pattern.
+It works, but the code is long-winded, especially when we only care about one pattern.
 
-Rust provides the `if let` syntactic sugar, used to match and destructure one particular enum variant while ignoring all other possible values.
+Rust provides the `if let` syntactic sugar to match and destructure one particular enum variant while ignoring all the others.
 
-So we can change `create_todo` to this:
+So `create_todo` can become:
 
 ```rust
 pub fn create_todo(todos: &mut Vec<TodoItem>, title: Option<String>, content: Option<String>) {
@@ -1538,14 +1536,14 @@ pub fn create_todo(todos: &mut Vec<TodoItem>, title: Option<String>, content: Op
   // ...
 ```
 
-This code means: if `title` matches `Some(arg_title)`, destructure `arg_title` and check whether it is empty.
-If it does not match, do nothing.
+This means: if `title` matches `Some(arg_title)`, destructure `arg_title` and check whether it is empty;
+if it does not match, do nothing.
 
-As you can see, the code is much simpler than before.
+The code is much simpler than before.
 
 ## Error Handling
 
-While implementing data persistence, we wrote the `save_todo_list` method.
+When we implemented data persistence, we wrote the `save_todo_list` method.
 
 ```rust
 pub fn save_todo_list(save_file: &str, todos: &Vec<TodoItem>) {
@@ -1554,15 +1552,15 @@ pub fn save_todo_list(save_file: &str, todos: &Vec<TodoItem>) {
 }
 ```
 
-Although this makes the program run, it also plants a hidden risk:
-as soon as serialization fails or the file write fails, the program crashes.
+This keeps the program running, but it plants a hidden risk:
+as soon as serialization or the file write fails, the program crashes.
 
-We want the program to handle problems gracefully even when something goes wrong, instead of crashing.
-So we need to bring in Rust's error handling mechanisms.
+We want the program to handle failures gracefully instead of crashing,
+so we need Rust's error handling mechanisms.
 
-Rust has no `try-catch` mechanism.
-Instead, it handles errors explicitly through the enum `Result<T, E>`.
-`T` is the type of the successful return value, and `E` is the error type.
+Rust has no `try-catch`.
+Instead it handles errors explicitly through the enum `Result<T, E>`, where
+`T` is the type of the successful return value and `E` is the error type.
 
 ```rust
 enum Result<T, E> {
@@ -1573,20 +1571,20 @@ enum Result<T, E> {
 
 ### unwrap and expect
 
-We used `unwrap` in the `save_todo_list` method. It is used to get a value out of a `Result<T, E>`.
+In `save_todo_list` we used `unwrap`, which pulls a value out of a `Result<T, E>`.
 
 - If the `Result` is `Ok(T)`, it returns `T`;
 - If the `Result` is `Err(E)`, the program panics and prints the error message.
 
-We can also use the `expect` method. It is similar to `unwrap`, but it returns a custom error message.
+There is also the `expect` method. It is similar to `unwrap`, but lets you supply the error message.
 
 ```rust
 let data = serde_json::to_string(todos).expect("serialization failed");
 ```
 
-But neither of these methods is recommended in a normal program, because any error will crash the program.
+Neither method is recommended in a normal program, because any error crashes it.
 
-A more robust approach is to use a `match` to handle the `Result<T, E>`.
+A more robust approach is to handle the `Result<T, E>` with `match`.
 
 ```rust
 pub fn save_todo_list(save_file: &str, todos: &Vec<TodoItem>) {
@@ -1610,7 +1608,7 @@ That way, even if something goes wrong, the program keeps running and tells the 
 
 ### The try Operator
 
-Rust also provides the `?` operator, used to propagate errors automatically. It saves us from nested `match` statements.
+Rust also provides the `?` operator, which propagates errors automatically and saves us from nested `match` statements.
 
 ```rust
 pub fn save_todo_list(save_file: &str, todos: &Vec<TodoItem>) -> Result<(), String> {
@@ -1620,7 +1618,7 @@ pub fn save_todo_list(save_file: &str, todos: &Vec<TodoItem>) -> Result<(), Stri
 }
 ```
 
-But if we run the code above directly, the compiler reports an error.
+But running that code directly makes the compiler report an error.
 
 ```bash
 error[E0277]: `?` couldn't convert the error to `std::string::String`
@@ -1646,21 +1644,21 @@ error[E0277]: `?` couldn't convert the error to `std::string::String`
    = note: required for `Result<(), std::string::String>` to implement `FromResidual<Result<Infallible, serde_json::Error>>`
 ```
 
-This is because `?` can only be used when the return type is a `Result` with a matching error.
+That is because `?` can only be used when the return type is a `Result` whose error type matches.
 
-We can see the error message: ``` `?` couldn't convert the error to `std::string::String` ``` ,
+The error message is: ``` `?` couldn't convert the error to `std::string::String` ``` ,
 
 The reason is that `save_todo_list` returns `Result<(), String>`, while the error type of `serde_json::to_string(...)` is `serde_json::Error`.
 The `?` operator tries to convert `serde_json::Error` into `String`, but `From<serde_json::Error> for String` is not implemented.
 
-So we need to convert the error so that the returned type matches the `save_todo_list` function.
+So we need to convert the error so that the return type matches `save_todo_list`'s.
 
 ### Function Closures
 
 We can solve this problem with closures.
 
-A closure is an anonymous function that, besides accepting arguments, can also capture variables from its environment.
-On top of that, a closure can be passed to a function as an argument.
+A closure is an anonymous function that can capture variables from its environment in addition to taking arguments.
+A closure can also be passed to a function as an argument.
 
 The syntax is as follows:
 
@@ -1678,7 +1676,7 @@ The syntax is as follows:
 If there is only one return expression, it can be simplified to `let add_x = |y| x + y;`.
 
 Now that we know about closures, we can rework `save_todo_list`.
-Using the `map_err` function and passing a closure, we uniformly convert any error that may occur into the `String` type.
+We call `map_err` with a closure to convert any error into `String` uniformly.
 
 ```rust
 pub fn save_todo_list(save_file: &str, todos: &Vec<TodoItem>) -> Result<(), String> {
@@ -1692,14 +1690,14 @@ Running it again, it works properly now.
 
 ## Finding Todos
 
-We have basically completed the functionality of the `create` command: it can create Todo items both from command-line arguments and through the interactive interface.
+The `create` command is basically complete: it can create Todo items from the command line and through the interactive flow.
 
-But our `list` command is still rather crude: it can only list all Todo items and cannot filter them by condition.
+But our `list` command is still crude: it can only list every Todo item, with no way to filter them.
 So we need to improve it.
 
 ### Filtering Todos
 
-We will create a `TodoItemFilter` struct to represent the filter configuration.
+We will create a `TodoItemFilter` struct to hold the filter configuration.
 
 ```rust
 pub struct TodoItemFilter {
@@ -1708,12 +1706,12 @@ pub struct TodoItemFilter {
 }
 ```
 
-`TodoItemFilter` will have two attributes, representing the `title` and `content` to filter by.
-Since it may be necessary to filter by only one of them, both are set to the optional type `Option<String>`.
+`TodoItemFilter` has two fields, the `title` and `content` to filter by.
+Since we may want to filter by only one of them, both use the optional type `Option<String>`.
 
-Next, we will implement some methods for it.
+Now let us implement a few methods for it.
 
-First, the instantiation method.
+First, the constructor.
 
 ```rust
 impl TodoItemFilter {
@@ -1726,17 +1724,17 @@ impl TodoItemFilter {
 }
 ```
 
-At the beginning we have no way of knowing what needs to be filtered, so both `title` and `content` are set to `None`.
+At the start we cannot know what will be filtered, so both `title` and `content` are set to `None`.
 
 ### Generic Bounds
 
-In the earlier code we learned about generics, which serve as placeholders for any type.
-But a bare `T` covers too wide a range. For example, the argument we need may be a string, yet numbers and booleans could also be passed in.
+Earlier we met generics, which stand in for any type.
+But a bare `T` covers too wide a range: the argument we need may be a string, yet numbers and booleans could be passed in just as well.
 
-To solve this, Rust supports adding type bounds to generics, so a generic parameter must satisfy specific conditions.
-Therefore we need to constrain the generic further.
+To fix that, Rust lets you add type bounds to generics so a generic parameter must satisfy certain conditions.
+So the generic needs a tighter constraint.
 
-For example, if we want the argument to be convertible into a string type, we can use `Into<String>` as the bound.
+For example, if we want the argument to be convertible into a string, we can use `Into<String>` as the bound.
 `Into<String>` means "any type that can be converted into `String`".
 
 ```rust
@@ -1753,11 +1751,11 @@ impl TodoItemFilter {
 ```
 
 The code above implements the `set_title` and `set_content` methods for `TodoItemFilter`.
-We do not care what concrete type the argument `T` is, as long as it satisfies the bound `Into<String>`.
-Whether `T` is `String`, `&str`, or `Vec<u8>`, any type that can be converted into `String` can be passed in.
+We do not care what concrete type `T` is, as long as it satisfies the `Into<String>` bound.
+Whether `T` is `String`, `&str`, or `Vec<u8>`, anything convertible into `String` can be passed in.
 
-There are two ways to write type bounds. The one above is the first: write the bound directly in the generic parameter position, which is more common.
-The second uses a separate `where` clause, which suits complex bounds.
+There are two ways to write type bounds. The first, used above, puts the bound in the generic parameter position and is more common;
+the second uses a separate `where` clause and suits complex bounds.
 
 ```rust
 impl TodoItemFilter {
@@ -1774,10 +1772,9 @@ impl TodoItemFilter {
 
 ### Filter Arguments
 
-Our Todo items currently have two attributes, `title` and `content`.
-We can filter Todo items by either one of these attributes, or by both.
+Our Todo items currently have two fields, `title` and `content`, and we can filter by either one or by both.
 
-Let us implement a `filter` method for `TodoItemFilter` to filter Todo items.
+Let us implement a `filter` method on `TodoItemFilter`.
 
 ```rust
 pub fn filter(&self, list: &Vec<TodoItem>) {
@@ -1813,15 +1810,15 @@ pub fn filter(&self, list: &Vec<TodoItem>) {
 }
 ```
 
-The code above is the `filter` method implemented for `TodoItemFilter`.
-It first creates an empty `filtered_list` to store the filtered Todo items.
-If both `title` and `content` are empty, all Todo items are put into `filtered_list` directly.
-Otherwise it iterates over all Todo items and filters by `title` and `content`:
-if both the `title` and the `content` of a Todo item contain the filter conditions, the item is put into `filtered_list`.
+This is the `filter` method, implemented on `TodoItemFilter`.
+It first creates an empty `filtered_list` for the matching items.
+If both `title` and `content` are `None`, every item goes straight into `filtered_list`.
+Otherwise it walks the list and checks each item:
+only items whose `title` and `content` both contain the filter text are added to `filtered_list`.
 
-Finally it iterates over `filtered_list` and prints the filtered Todo items.
+Finally it iterates over `filtered_list` and prints the matching items.
 
-Then we rework the `TodoCommand` enum, adding two arguments to the `list` command.
+Next we rework the `TodoCommand` enum, adding two arguments to the `list` command.
 
 ```rust
 // ...
@@ -1835,7 +1832,7 @@ List {
 // ...
 ```
 
-Rework the `main` function to pass the filter arguments to the `list` command.
+Rework `main` to pass the filter arguments to the `list` command.
 
 ```rust
 // ...
@@ -1848,7 +1845,7 @@ Rework the `main` function to pass the filter arguments to the `list` command.
 // ...
 ```
 
-Next, rework the `list_todo` function.
+Then rework the `list_todo` function.
 
 ```rust
 pub fn list_todo(todos: &Vec<TodoItem>, title: Option<String>, content: Option<String>) {
@@ -1866,20 +1863,20 @@ pub fn list_todo(todos: &Vec<TodoItem>, title: Option<String>, content: Option<S
 }
 ```
 
-Now, when we run `cargo run -- list`, we can pass `--title` and `--content` to filter the results.
+Now `cargo run -- list` accepts `--title` and `--content` to filter the results.
 
 ## Traits
 
-When implementing the `set_title` and `set_content` methods for the `list` command, we used `Into<String>` as a type bound.
-But `Into<T>` is not a type: it is a trait, a mechanism Rust uses to define behavioral contracts. It lets us define a uniform capability specification for types.
+When implementing `set_title` and `set_content` for the `list` command, we used `Into<String>` as a type bound.
+But `Into<T>` is not a type: it is a trait, the mechanism Rust uses to define behavioral contracts, that is, a uniform capability a type can offer.
 
-We can think of traits in Rust as interfaces in other languages.
+Think of traits in Rust as interfaces in other languages.
 
-Rust ships with many built-in traits. For example, `Into<T>` means a type can be converted into `T`, `From<T>` means a type can be constructed from `T`,
-and `Copy` and `Clone` can express whether a type can be copied, and so on.
+Rust ships many built-in traits. For example, `Into<T>` means a type can be converted into `T`, `From<T>` means a type can be constructed from `T`,
+and `Copy` and `Clone` say whether a value can be copied, and so on.
 
-When we first wrote our program, we already ran into an error involving a trait.
-The `String` type does not implement the `Copy` trait, so an argument cannot be assigned directly.
+We ran into a trait error early on, when first writing the program:
+`String` does not implement the `Copy` trait, so a value cannot simply be assigned.
 
 ```bash
 6 |   let title = args[1];
@@ -1896,11 +1893,11 @@ trait PrintName {
 }
 ```
 
-Like enums, as long as a trait is marked with `pub`, all of its methods become accessible from outside.
+As with enums, a trait marked with `pub` makes all of its methods accessible from outside.
 
 ### Implementing Traits
 
-Implementing a trait depends on a type. On top of the original form of implementing methods for a type, we add the name of the trait being implemented and the `for` keyword.
+Implementing a trait is tied to a type. On top of the usual `impl` block, we add the trait name and the `for` keyword.
 
 ```rust
 trait PrintName {
@@ -1914,14 +1911,14 @@ impl PrintName for TodoItem {
 }
 ```
 
-If you want to implement trait B for type A, then one of the two must be defined in the current scope, otherwise it will not work.
-For example, if you want to implement the `Copy` trait for `String`, both are defined in the standard library rather than the current scope, so it cannot be done.
+To implement trait B for type A, one of the two must be defined in the current scope, otherwise the impl is rejected.
+For example, implementing `Copy` for `String` is impossible, because both are defined in the standard library rather than the current crate.
 
-This rule is called the orphan rule. It ensures that code written by others cannot break our code, and that we do not inexplicably break other people's code.
+This is called the orphan rule. It ensures that other people's code cannot break ours, and that we do not inexplicably break theirs.
 
 ### Trait Bounds
 
-Earlier we used a trait bound, namely `T: Into<String>`. It means `T` must implement the `Into<String>` trait.
+Earlier we used a trait bound, `T: Into<String>`, meaning `T` must implement the `Into<String>` trait.
 
 Trait bounds constrain not only generics, but also traits themselves.
 
@@ -1931,12 +1928,12 @@ trait PrintName: Display {
 }
 ```
 
-The code above defines the `PrintName` trait, requiring that an implementing type must also implement the `Display` trait in order to implement it.
-You can add more bounds with `+`. For example, `trait PrintName: Display + Clone` means `PrintName` requires both `Display` and `Clone` to be implemented.
+The code above defines the `PrintName` trait and requires any implementing type to implement `Display` as well.
+More bounds can be added with `+`: `trait PrintName: Display + Clone` requires both `Display` and `Clone`.
 
 ### Argument Bounds
 
-Traits can also be used to constrain argument types.
+Traits can also constrain argument types.
 
 ```rust
 trait PrintName: Display {
@@ -1956,12 +1953,10 @@ fn printName<T: PrintName>(item: &T) {
 
 ## Implementing a Trait for TodoItem
 
-In our earlier work we implemented serialization and deserialization methods for `TodoItem`. These two kinds of methods are quite common in development.
-Implementing them one by one for every type is a bit too tedious.
+Earlier we gave `TodoItem` serialization and deserialization methods, which are common in development.
+Writing them again for every type would be tedious, so we can declare a trait to hold these shared behaviors.
 
-So we can declare a trait to extract these common behaviors.
-
-First, define a `Serializer` trait representing the set of serialization and deserialization methods. Then implement the `Serializer` trait for `TodoItem`.
+First, define a `Serializer` trait for the serialization and deserialization methods, then implement it for `TodoItem`.
 
 ```rust
 pub trait Serializer {
@@ -1982,9 +1977,9 @@ impl Serializer for TodoItem {
 
 ### Default Trait Implementations
 
-In the code above, even though we have extracted the serialization and deserialization methods, the method bodies still have to be written by hand, which is still tedious.
+Even with the methods extracted into a trait, every implementation still has to write the bodies by hand, which is tedious.
 
-So we can use default implementations to avoid writing the method bodies manually.
+Default implementations save us that work.
 
 ```rust
 pub trait Serializer {
@@ -2000,7 +1995,7 @@ pub trait Serializer {
 impl Serializer for TodoItem {}
 ```
 
-Change the code to the above and run it. You will find an error. Let us deal with the error in the `serialize` method first.
+Make the change above and run it. An error appears; let us deal with the one from `serialize` first.
 
 ```bash
 error[E0277]: the trait bound `Self: Serialize` is not satisfied
@@ -2027,10 +2022,10 @@ help: consider further restricting `Self`
      |                                   +++++++++++++++++++++
 ```
 
-The error is ```the trait bound `Self: Serialize` is not satisfied```.
-It happens because the `Self` type does not satisfy the type bound required by `serde_json::to_string(self)`.
+The error is ```the trait bound `Self: Serialize` is not satisfied```,
+because `Self` does not satisfy the bound that `serde_json::to_string(self)` requires.
 
-We can look at the definition of the `serde_json::to_string` method.
+Let us look at the definition of `serde_json::to_string`.
 
 ```rust
 serde_json::ser
@@ -2040,9 +2035,7 @@ where
 // ...
 ```
 
-As you can see, it uses a `where` clause requiring the type `T` to implement the `?Sized` and `Serialize` traits.
-
-Let us add the missing bounds.
+It uses a `where` clause requiring `T` to implement `?Sized` and `Serialize`, so let us add the missing bounds.
 
 ```rust
 pub trait Serializer
@@ -2061,9 +2054,7 @@ where
 impl Serializer for TodoItem {}
 ```
 
-Run it again: the `serialize` method no longer errors, and only the `deserialize` method is left.
-
-The error from the `deserialize` method is as follows:
+Run it again: `serialize` is fine now and only `deserialize` complains:
 
 ```bash
 error[E0277]: the trait bound `Self: Deserialize<'_>` is not satisfied
@@ -2088,11 +2079,9 @@ help: consider further restricting `Self`
      |                                                   +++++++++++++++++++++++++++
 ```
 
-The error message ```the trait bound `Self: Deserialize<'_>` is not satisfied``` shows that this too is caused by an unsatisfied type bound.
+The message ```the trait bound `Self: Deserialize<'_>` is not satisfied``` shows the same cause: an unsatisfied type bound.
 
-The compiler also hints that we should add the bound.
-
-Add the bound, and the code becomes:
+Here too the compiler hints that we should add the bound. Doing so gives:
 
 ```rust
 pub trait Serializer
@@ -2109,7 +2098,7 @@ where
 }
 ```
 
-Run it again: the `deserialize` error is gone. But a new error appears:
+Run it again: the `deserialize` error is gone, but a new one appears:
 
 ```bash
 error[E0637]: `'_` cannot be used here
@@ -2121,17 +2110,17 @@ error[E0637]: `'_` cannot be used here
 For more information about this error, try `rustc --explain E0637`.
 ```
 
-The error message ``` `'_` cannot be used here``` means `'_` cannot be used here,
-and ``` `'_` is a reserved lifetime name``` tells us that `'_` is a reserved lifetime name.
+The message ``` `'_` cannot be used here``` says that `'_` is not allowed in this position,
+and ``` `'_` is a reserved lifetime name``` tells us why: `'_` is a reserved lifetime name.
 
 ### Lifetimes
 
-A lifetime usually refers to a complete process from the beginning to the end of something.
+A lifetime is the span from the beginning to the end of something.
 
-In Rust it is a compile-time concept, used to check whether references are valid and to avoid problems such as dangling pointers.
-Usually we do not need to annotate lifetimes manually, because the compiler infers them; only when the compiler cannot determine them do we need to annotate.
+In Rust it is a compile-time concept: it is used to check that references stay valid and to avoid problems such as dangling pointers.
+Usually we do not need to annotate lifetimes, because the compiler infers them; only when it cannot do we have to.
 
-You can simply think of a lifetime in Rust as the valid scope of a reference.
+For our purposes, a lifetime in Rust is simply the valid scope of a reference.
 
 ```rust
 {
@@ -2144,24 +2133,24 @@ You can simply think of a lifetime in Rust as the valid scope of a reference.
 }
 ```
 
-The code above is split into two levels by braces. In the first level, the variable `r` is declared without a value.
-In the second level, the variable `n` is declared and the address of `n` is assigned to `r`.
+The braces split the code above into two levels. In the outer level, the variable `r` is declared without a value.
+In the inner level, the variable `n` is declared and the address of `n` is assigned to `r`.
 
-`n` is a local variable whose lifetime ends at the end of the second level, that is, when the braces close.
-`r` is a reference pointing to `n`, and its lifetime is within the scope where `r` lives, that is, inside the braces of the first level.
+`n` is a local variable whose lifetime ends when the inner level ends, that is, when its braces close.
+`r` is a reference to `n`, and its own lifetime runs to the end of the outer braces.
 
-It is fine that the lifetime of `n` is shorter than that of `r`. But assigning the reference to `n` to `r` causes a problem:
-`n` is destroyed when its lifetime ends, and `r` ends up pointing at an already destroyed variable.
+It is fine that `n` has a shorter lifetime than `r`. The problem is assigning a reference to `n` to `r`:
+`n` is destroyed when its lifetime ends, leaving `r` pointing at a destroyed variable.
 
-Back to the error from the new `deserialize` method. `'_` is a special lifetime marker, used for lifetime elision or for temporary lifetime annotation.
-It can be inferred automatically by the compiler, but it is not allowed in a type bound here.
+Back to the error in the new `deserialize` method. `'_` is a special lifetime marker used for lifetime elision or a temporary lifetime annotation.
+The compiler can infer it automatically, but it is not allowed in a type bound.
 
-Rust requires an explicit lifetime name in a type bound, because the compiler cannot infer the concrete lifetime there.
+Rust requires an explicit lifetime name there, because the compiler cannot infer the concrete lifetime in a bound.
 
 Replace `'_` with `'a` and run again.
-> Note that Rust has no special requirements for lifetime names; by convention a single lowercase letter is usually used.
+> Note that Rust puts no special requirements on lifetime names; by convention a single lowercase letter is used.
 
-The previous error is gone, and a new one appears.
+The previous error is gone and a new one appears.
 
 ### Higher-Ranked Lifetime Bounds
 
@@ -2187,34 +2176,34 @@ help: consider introducing lifetime `'a` here
    |                     ++++
 ```
 
-Focusing again on ```use of undeclared lifetime name `'a` ```: it means we used a lifetime that was never declared. The compiler offers several solutions.
+Focusing again on ```use of undeclared lifetime name `'a` ```: we used a lifetime that was never declared, and the compiler offers several solutions.
 
-Here is what each solution means:
+Here is what each one means:
 
 - `Self: Sized + Serialize + for<'a> Deserialize<'a>`:
-  This is the most common and general form. It uses a higher-ranked lifetime bound, meaning that whatever lifetime `'a` is, `Self` implements the trait `Deserialize<'a>`.
+  This is the most common, most general form. It uses a higher-ranked lifetime bound: whatever lifetime `'a` is, `Self` implements `Deserialize<'a>`.
 
 - `pub trait Serializer<'a>`:
-  This makes the trait itself carry a lifetime parameter that can be used in all of the trait's methods, but it forces callers of the trait to pass a lifetime, which is quite intrusive.
+  This makes the trait itself carry a lifetime parameter usable in all of its methods, but it forces every user of the trait to pass a lifetime, which is intrusive.
 
 - `for<'a> Self: Sized + Serialize + Deserialize<'a>,`:
-  This also uses a higher-ranked lifetime bound, but `'a` applies to the whole bound, meaning the type bound holds for any lifetime `'a`.
+  This also uses a higher-ranked lifetime bound, but `'a` applies to the whole bound: the bound holds for any lifetime `'a`.
 
-We will use the first one. After the rework, running it again produces no more errors.
+We will use the first one, and after the rework it runs with no errors.
 
 ## Verifying the Features
 
-At this point we have completed the create, view, filter, and persistence features of the Todo CLI.
-Although we can verify things by running commands by hand, as features multiply and logic grows more complex, manual operation becomes both tedious and easy to overlook.
+At this point the create, view, filter, and persistence features of the Todo CLI are done.
+We can still check them by running commands by hand, but as features multiply and logic grows, manual checking becomes tedious and easy to get wrong.
 
-Rust provides a powerful built-in test module, letting us verify features automatically instead of testing them by hand over and over.
+Rust has a powerful built-in test module that lets us verify features automatically instead of testing them by hand over and over.
 
 ### Unit Tests
 
-A unit test aims to test one code unit (usually a function) and verify that it works as expected.
-For example, testing an `add` function to verify that, given two inputs, the returned sum matches expectations.
+A unit test checks one code unit (usually a function) and verifies that it behaves as expected.
+For example, testing an `add` function to confirm that two inputs produce the sum you expect.
 
-We can write our own test logic in each module and run them all in bulk with the `cargo test` command.
+Test logic can live in each module, and `cargo test` runs them all in one go.
 
 In Rust, unit test code and the code under test are usually kept in the same file.
 
@@ -2249,9 +2238,9 @@ mod tests {
 In the code above we added two test functions:
 
 - `test_todo_item_creation`: verifies that `TodoItem::new` assigns values correctly.
-- `test_serialization_roundtrip`: verifies that the struct can be restored after being serialized.
+- `test_serialization_roundtrip`: verifies that a serialized struct can be restored.
 
-After adding this content to `src/todo/core.rs`, run `cargo test` and Rust will perform the tests.
+After adding this to `src/todo/core.rs`, run `cargo test` to let Rust run the tests.
 
 ```bash
 test todo::core::tests::test_serialization_roundtrip ... ok
@@ -2274,7 +2263,7 @@ failures:
 test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-As you can see, `todo::core::tests::test_todo_item_creation` failed, saying:
+`todo::core::tests::test_todo_item_creation` failed with:
 
 ```bash
 assertion `left == right` failed
@@ -2283,8 +2272,8 @@ assertion `left == right` failed
 ```
 
 The assertion failed because the two values do not match.
-Going back to the test code, change the mistyped `test1` in `let item = TodoItem::new("test1", "content");` to `test`.
-Run `cargo test` again, and the result is:
+Back in the test code, change the mistyped `test1` in `let item = TodoItem::new("test1", "content");` to `test`.
+Run `cargo test` again:
 
 ```bash
 running 2 tests
@@ -2294,71 +2283,71 @@ test todo::core::tests::test_serialization_roundtrip ... ok
 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-This shows that all our tests pass and the features behave as expected.
+All our tests pass, so the features behave as expected.
 
 ### Assertions
 
-An assertion is a checkpoint set in a program: when execution reaches it, the state of the program is checked.
-If the check is true, the program continues; if it is false, the program throws an exception and stops.
+An assertion is a checkpoint in a program: when execution reaches it, the program's state is checked.
+If the check passes, execution continues; if it fails, the program throws an exception and stops.
 
-Rust commonly uses the following assertions:
+Rust commonly uses these assertions:
 
 - `assert!(expr)`: throws an exception if `expr` is false.
 - `assert_eq!(left, right)`: throws an exception if `left` does not equal `right`.
 - `assert_ne!(left, right)`: throws an exception if `left` equals `right`.
 
-If you add a `debug_` prefix, it only runs in `Debug` mode, for example `debug_assert!(expr)`.
+Prefixing with `debug_`, as in `debug_assert!(expr)`, makes it run only in `Debug` mode.
 
 ### Conditional Compilation
 
-In the test code we can see `#[cfg(test)]` on the `tests` module.
+In the test code, `#[cfg(test)]` sits on the `tests` module.
 
-It is used for conditional compilation. It means the code of `tests` is compiled only when the `test` condition is met,
-that is, only when the `cargo test` command is executed.
+That is conditional compilation: the code in `tests` is compiled only when the `test` condition holds,
+that is, only when `cargo test` runs.
 
-Besides the `test` condition, we can add more conditions, for example:
+Beyond `test`, more conditions can be combined, for example:
 
-- `#[cfg(all(target_os="windows", test))]` compiles `cargo test` only when the compilation target is the `windows` platform.
-- `#[cfg(all(any(target_os = "ios", target_os = "android"), test))]` compiles `cargo test` only when the compilation target is mobile.
-- `#[cfg(all(not(any(target_os = "ios", target_os = "android")), test))]` compiles `cargo test` only when the compilation target is not mobile.
+- `#[cfg(all(target_os="windows", test))]` compiles under `cargo test` only when the target platform is `windows`.
+- `#[cfg(all(any(target_os = "ios", target_os = "android"), test))]` compiles under `cargo test` only when the target platform is mobile.
+- `#[cfg(all(not(any(target_os = "ios", target_os = "android")), test))]` compiles under `cargo test` only when the target platform is not mobile.
 
-Conditional compilation can be used in many places, from a single variable to a whole module.
+Conditional compilation can be applied almost anywhere, from a single variable to a whole module.
 
 ## Summary
 
-Through this tutorial we not only took our first step in Rust programming, but turned theory into practical ability by building a Todo CLI by hand.
-From the initial "Hello, world!" output to a program that can create and list Todo items from the command line with data persistence, we gradually mastered the key knowledge points of Rust, from basic syntax to its core features.
+In this tutorial we took a first step in Rust, turning theory into practice by building a Todo CLI by hand.
+From the initial "Hello, world!" to a program that creates and lists Todo items from the command line and persists them, we covered Rust's key ideas, from basic syntax to its core features.
 
-Along the way we gained a deep understanding of the design that sets Rust apart from other languages:
+Along the way we came to understand the design that sets Rust apart from other languages:
 
-- The ownership system avoids dangling pointers and double frees through strict memory management rules.
+- The ownership system uses strict memory management rules to avoid dangling pointers and double frees.
 - Borrowing and lifetimes ensure that references are valid.
-- Traits and generics enable flexible code abstraction and reuse.
+- Traits and generics make code abstraction and reuse flexible.
 
-At the same time, we practiced the key parts of engineering with Rust:
-using cargo to manage the project and its dependencies, splitting the code structure into modules,
-leveraging third-party libraries such as `serde` and `clap` to boost development efficiency, and guaranteeing code quality with unit tests.
+We also practiced the engineering side of Rust:
+managing the project and its dependencies with cargo, splitting the code into modules,
+leaning on third-party libraries such as `serde` and `clap` for speed, and guarding code quality with unit tests.
 
-That said, the current Todo CLI still has plenty of room for improvement:
+That said, the current Todo CLI still has plenty of room to grow:
 
-It only supports the create and list commands, lacking the ability to delete and modify Todo items, so it cannot handle the "task changed" situations of daily use.
+It supports only the create and list commands, with no way to delete or modify Todo items, so it cannot handle the everyday case where a task changes.
 
-Todo items only contain a title and content, without a status marker (such as "done" and "not done"), which makes task progress hard to track.
+A Todo item holds only a title and content, with no status marker such as "done" or "not done", which makes progress hard to track.
 
-In addition, details such as fault tolerance in the command-line interaction and more finely grained filtering (for example, filtering by status) remain to be improved.
+On top of that, details such as fault tolerance in the command-line interaction and finer-grained filtering (by status, say) remain to be improved.
 
-But these shortcomings are exactly the opportunity for deeper learning.
+But these gaps are exactly the opportunity for deeper learning.
 
-By extending the features and optimizing the implementation, we can further consolidate our knowledge of Rust pattern matching, error handling, enum design, and more.
-Truly weaving the "memory safety" and "high performance" characteristics into real development lets this simple tool gradually grow into a practical, robust productivity tool.
+By extending the features and refining the implementation, we can consolidate what we know about Rust pattern matching, error handling, enum design, and more.
+Putting memory safety and high performance to work in real code is what lets this simple tool grow into a practical, robust productivity tool.
 
 ## Implementations in Other Languages
 
-The same Todo CLI is also provided in three equivalent implementations: Go, Python, and TypeScript,
-located in the `golang/`, `python/`, and `typescript/` directories respectively.
+The repository also ships three equivalent implementations of the same Todo CLI in Go, Python, and TypeScript,
+found in the `golang/`, `python/`, and `typescript/` directories.
 
-These implementations follow the Rust version as closely as possible in directory structure, function and struct naming, and execution flow,
-and they use exactly the same `todo.json` format as the Rust version, so all four implementations can read and write the same data.
+They follow the Rust version as closely as possible in directory structure, function and struct naming, and execution flow,
+and they use exactly the same `todo.json` format, so all four implementations can read and write the same data.
 
 ### Directory Structure
 
@@ -2382,8 +2371,8 @@ The Go version has the following directory structure:
       - storage.go          # corresponds to src/todo/storage.rs
 ```
 
-The Python version has the following directory structure. In Python a directory is itself a package,
-so `todo/__init__.py` is the equivalent of `src/todo.rs`, which only declares modules:
+The Python version is laid out as follows. In Python a directory is itself a package,
+so `todo/__init__.py` plays the part of `src/todo.rs`, which only declares modules:
 
 ```sh
 # python directory structure
@@ -2398,8 +2387,8 @@ so `todo/__init__.py` is the equivalent of `src/todo.rs`, which only declares mo
     - storage.py            # corresponds to src/todo/storage.rs
 ```
 
-The TypeScript version has the following directory structure. TypeScript likewise has no module declaration file,
-and `todo/todo.ts` takes on the role of `src/todo.rs` through namespace re-exports:
+The TypeScript version is laid out as follows. TypeScript likewise has no module declaration file,
+so `todo/todo.ts` takes over the role of `src/todo.rs` through namespace re-exports:
 
 ```sh
 # typescript directory structure
@@ -2445,7 +2434,7 @@ npm run typecheck                   # type checking (run npm install first)
 ```
 
 All three implementations support the same argument forms as the Rust version: `-t/--title`, `-c/--content`, `--title=value`,
-as well as `--help`, `--version`, and the `help` subcommand.
+plus `--help`, `--version`, and the `help` subcommand.
 
 ### Comparison with Rust
 
@@ -2465,40 +2454,40 @@ as well as `--help`, `--version`, and the `help` subcommand.
 
 ### Implementation Notes
 
-The type systems of the three languages differ, so the following trade-offs were made when porting:
+The three languages have different type systems, so the ports make these trade-offs:
 
 - Enums: Rust enum variants can carry data, while Go has no enums, so a type constant together with a struct is used instead;
-  Python represents one variant with a data class and the whole enum with a union type, destructuring it with a `match` statement in `main`;
-  TypeScript uses a discriminated union and matches patterns in `main` with `switch` plus destructuring.
+  Python represents each variant with a data class and the whole enum with a union type, destructured by a `match` statement in `main`;
+  TypeScript uses a discriminated union and pattern matches in `main` with `switch` plus destructuring.
 - Optional values: `Option<String>` maps to `*string` in Go, `str | None` in Python, and `string | null` in TypeScript.
 - Traits: a Rust trait can provide default implementations for a type, but a Go interface cannot, so Go constrains types with an interface
-  and provides default implementations through the generic function `Deserialize[T]`; Python and TypeScript abstract base classes can give default implementations directly, which maps most naturally.
+  and provides default implementations through the generic function `Deserialize[T]`; Python and TypeScript abstract base classes can give default implementations directly, which translates most directly.
 - Error handling: the `Result<(), String>` returned by `save_todo_list` maps to `error` in Go, and to exceptions in Python and TypeScript.
-- Command-line parsing: none of the three has clap's derive macro, so the logic for parsing arguments such as `-t/--title` is implemented by hand,
+- Command-line parsing: none of the three has clap's derive macro, so arguments such as `-t/--title` are parsed by hand,
   keeping the help text and exit codes consistent with clap (`--help` exits with 0, an argument error exits with 2).
 - Serialization: all three use the same compact format as `serde_json` (no spaces after `,` and `:`, non-ASCII characters not escaped),
   so the `todo.json` they write is byte-for-byte identical to the Rust version.
 
-Issues each language needed to handle additionally:
+Issues each language had to handle on its own:
 
-- Go: it has no enums and no optional values, so type constants plus a struct and pointers are used to express `Option`; and since it has no default trait methods,
-  an interface constrains the type while a generic function provides the default implementation.
-- Python: it has no "multi-line input" primitive, so `input()` is used to read;
-  also, `list` and `filter` are built-in names, and using them as parameter names would shadow them, so they were renamed to `todos` and `item_filter`.
-- TypeScript: types are erased at runtime, so `storage.ts` explicitly validates field types
+- Go: no enums and no optional values, so type constants plus a struct and pointers express `Option`; there are also no default trait methods,
+  so an interface constrains the type and a generic function supplies the default implementation.
+- Python: there is no "multi-line input" primitive, so input is read with `input()`;
+  and since `list` and `filter` are built-in names that parameter names would shadow, they were renamed to `todos` and `item_filter`.
+- TypeScript: types are erased at runtime, so `storage.ts` validates field types explicitly
   in order to print `parse file error` like serde does when the data is invalid;
-  reading standard input in Node is usually asynchronous, so to keep the synchronous flow of `create_todo`,
-  `create.ts` uses `fs.readSync` and maintains its own buffer, splitting it by line.
+  reading standard input in Node is usually asynchronous, so to keep `create_todo` synchronous,
+  `create.ts` uses `fs.readSync` and maintains its own line buffer.
 
-Three intentional differences:
+Three deliberate differences:
 
-- Python uses `input()` to read input, which does not include the trailing newline, so blank lines prompt for input again
-  (Rust's `read_line` keeps the newline, which means that check in practice only holds when the end of input is reached).
+- Python reads with `input()`, which strips the trailing newline, so a blank line prompts again
+  (Rust's `read_line` keeps the newline, meaning that check only really holds at the end of input).
 - Go and TypeScript keep Rust's line-reading semantics (newline included, a blank line yields an empty string),
-  but they no longer spin like Rust when the end of input is reached; instead they raise an exception/error, consistent with `.expect("read line failed")`.
-- Go and Python both have identifiers that would shadow built-in names (`list`, `filter`), which were renamed; TypeScript needs no renaming and keeps Rust's original names.
+  but unlike Rust they do not spin at the end of input: they raise an exception/error, matching `.expect("read line failed")`.
+- Go and Python both have identifiers that would shadow built-ins (`list`, `filter`), so they were renamed; TypeScript needs no renaming and keeps Rust's names.
 
-> Note: each implementation also stores its data file as `todo.json` in the current working directory,
+> Note: each implementation stores its data as `todo.json` in the current working directory,
 > so running inside `golang/`, `python/`, or `typescript/` writes a `todo.json` in that directory (independent of the one in the repository root).
 
 ## References
