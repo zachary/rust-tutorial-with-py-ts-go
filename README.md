@@ -1,41 +1,43 @@
 # Rust Tutorial
 
-Rust 是一门近年来快速发展的系统级编程语言。
+[English](README.md) | [中文](README-zh.md)
 
-它兼具高性能与内存安全, 广泛应用于嵌入式系统、操作系统、WebAssembly、后端服务以及命令行工具的开发。
+Rust is a systems programming language that has grown rapidly in recent years.
 
-相较于 C 语言 “相信你知道自己在做什么”, 因此几乎不加限制地允许你操作内存和指针。
-Rust 则恰恰相反, 它从语言设计层面 “不信任开发者”, 认为 “你总有一天会犯错”。
+It combines high performance with memory safety, and is widely used in embedded systems, operating systems, WebAssembly, backend services, and command-line tools.
 
-因此, Rust 引入了所有权系统、借用检查和生命周期机制。以求在编译阶段就将那些 “未来可能出问题的代码” 拒之门外。
-这也意味着, 开发者在编写代码时, 往往需要花时间理解这些机制, 努力 “说服” 编译器接受自己的写法。
-尽管这过程曲折, 但最终收获的是更加健壮和安全的程序。
+C "trusts that you know what you are doing", which is why it lets you manipulate memory and pointers with almost no restrictions.
+Rust is the exact opposite: at the language design level it "does not trust developers" and assumes "you will make a mistake sooner or later".
 
-本文将通过带领读者实现一个简单用于记录 Todo 事项的 CLI (Command Line Interface, 命令行接口) 程序来学习 Rust。
+For this reason, Rust introduced the ownership system, borrow checking, and lifetimes, so that code which "might break in the future" is kept out at compile time.
+This also means that while writing code, developers often need to take the time to understand these mechanisms and work to "convince" the compiler to accept their writing.
+Although the process is winding, what you get in the end is a more robust and safer program.
 
-除此之外, 仓库中还提供了同一程序的 [Go、Python 与 TypeScript 实现](#其他语言的实现), 方便对照学习不同语言对同一套设计的表达方式。
+In this tutorial we will learn Rust by building a simple CLI (Command Line Interface) program for recording Todo items.
 
-## 初始准备
+On top of that, the repository also provides the same program [implemented in Go, Python, and TypeScript](#implementations-in-other-languages), so you can compare how different languages express the same design.
 
-首先通过 [Rust 官网](https://www.rust-lang.org/zh-CN/learn/get-started) 获取 Rust 安装包。
+## Getting Prerequisites Ready
 
-并跟随官方的文档来进行安装环境。
+First, get the Rust installer from the [official Rust website](https://www.rust-lang.org/learn/get-started).
 
-安装完毕之后, 使用 `cargo init` 可以初始化一个项目。
+Then follow the official documentation to set up the environment.
+
+Once installation is complete, you can initialize a project with `cargo init`.
 
 ```shell
-cargo init # 在当前目录下初始化
-cargo init Project # 当前目录下新建一个 Project 目录
+cargo init # initialize in the current directory
+cargo init Project # create a new Project directory in the current directory
 ```
 
-## 初始化项目
+## Initializing the Project
 
-使用 `cargo init cli` 初始化一个名为 cli 的项目。
+Use `cargo init cli` to initialize a project named cli.
 
-目录结构如下:
+The directory structure is as follows:
 
 ```sh
-# cli 目录结构
+# cli directory structure
 - .git
 - src
   - main.rs
@@ -43,9 +45,9 @@ cargo init Project # 当前目录下新建一个 Project 目录
 - Cargo.toml
 ```
 
-其中的 `src` 目录存放的是项目源代码。 `Cargo.toml` 文件则用于保存项目依赖。
+The `src` directory stores the project source code, while the `Cargo.toml` file stores the project dependencies.
 
-使用编辑器打开 `src/main.rs`。可以看见以下内容:
+Open `src/main.rs` in an editor. You will see the following:
 
 ```rust
 fn main() {
@@ -53,15 +55,15 @@ fn main() {
 }
 ```
 
-使用终端打开项目。使用 `cargo run` 运行项目。
+Open the project in a terminal and run it with `cargo run`.
 
-可以看见 `Hello world!` 被输出。
+You will see `Hello world!` printed.
 
-需要注意的是，在 Rust 中，语句末尾要加上分号 `;`。
+Note that in Rust, statements must end with a semicolon `;`.
 
-## 变量
+## Variables
 
-在 Rust 中, 变量声明使用的是 `let` 关键字。
+In Rust, variables are declared with the `let` keyword.
 
 ```rust
 fn main() {
@@ -70,10 +72,10 @@ fn main() {
 }
 ```
 
-我们不需要每个变量都专门标注类型, 编译器会自动推断出变量的类型。
-只有当编译器无法推断出变量类型时, 才需要手动标注类型。
+We do not need to annotate the type of every variable; the compiler infers it automatically.
+Only when the compiler cannot infer the type do we need to annotate it manually.
 
-因此以上代码可以更改为:
+So the code above can be changed to:
 
 ```rust
 fn main() {
@@ -82,23 +84,23 @@ fn main() {
 }
 ```
 
-我们的 CLI 用于记录 Todo 事项, 因此我们需要可以输入内容。
+Our CLI records Todo items, so we need to be able to input content.
 
-Rust 官方提供了标准库 `std::env` 用来获取环境信息。它提供了一个 `args` 函数, 允许获取命令行参数。
+The Rust standard library provides `std::env` for obtaining environment information. It offers an `args` function that returns the command-line arguments.
 
-更改 `main.rs` 为如下内容:
+Change `main.rs` to the following:
 
 ```rust
 fn main() {
-  // 因为 args 函数返回的是一个迭代器, 我们需要将其收集为一个数据集合
-  // 用户输入是未知的, 因此我们需要指定收集的输入类型, 即 String
+  // Since args returns an iterator, we need to collect it into a collection
+  // The user input is unknown, so we need to specify the collected type, i.e. String
   let args: Vec<String> = std::env::args().collect();
 
   println!("{:#?}", args);
 }
 ```
 
-命令行运行 `cargo run -- a b`, 结果如下:
+Run `cargo run -- a b` on the command line, and the result is:
 
 ```bash
 [
@@ -108,9 +110,9 @@ fn main() {
 ]
 ```
 
-可以看见, 我们获得的输入是一个数组格式, 它的第一项是我们的可执行文件路径。
+As you can see, the input we get is in array form, and its first item is the path to our executable.
 
-我们需要的是输入的内容, 即 `a` 和 `b`
+What we need is the input content, namely `a` and `b`.
 
 ```rust
 fn main() {
@@ -123,7 +125,7 @@ fn main() {
 }
 ```
 
-运行 `cargo run -- a b`。会发现有报错:
+Run `cargo run -- a b`. You will find that it reports an error:
 
 ```bash
 error[E0507]: cannot move out of index of `Vec<String>`
@@ -157,9 +159,9 @@ help: consider cloning the value if the performance cost is acceptable
   |                        ++++++++
 ```
 
-### 所有权
+### Ownership
 
-以上报错的关键如下:
+The key part of the error above is the following:
 
 ```bash
 cannot move out of index of `Vec<String>`
@@ -167,36 +169,36 @@ cannot move out of index of `Vec<String>`
 move occurs because value has type `String`, which does not implement the `Copy` trait
 ```
 
-它的意思是: 无法从 `Vec<String>` 中取出值, 因为 `String` 类型没有实现 `Copy` 特征, 无法被隐式复制。
+It means: a value cannot be taken out of a `Vec<String>`, because the `String` type does not implement the `Copy` trait and therefore cannot be copied implicitly.
 
-在前面有提及到:
+As mentioned earlier:
 
-> Rust 它从语言设计层面 “不信任开发者”, 认为 “你总有一天会犯错”。
+> At the language design level, Rust "does not trust developers" and assumes "you will make a mistake sooner or later".
 >
-> 因此, Rust 引入了所有权系统、借用检查和生命周期机制。以求在编译阶段就将那些 “未来可能出问题的代码” 拒之门外。
+> For this reason, Rust introduced the ownership system, borrow checking, and lifetimes, so that code which "might break in the future" is kept out at compile time.
 
-这里就是因为 Rust 引入的所有权系统导致的问题。
+This problem is caused by the ownership system that Rust introduced.
 
-根据 Rust 所有权规则:
+According to the Rust ownership rules:
 
-- 每个值都有一个所有者。
-- 每个值同时只能有一个所有者。
-- 当所有者离开作用域时, 这个值将被丢弃。
+- Every value has an owner.
+- Each value can have only one owner at a time.
+- When the owner goes out of scope, the value is dropped.
 
-以上报错就很好理解了。
+With that, the error above is easy to understand.
 
-我们试图从 `Vec<String>` 这个类型中取出值, 但是根据所有权原则, 每个值都只能有一个所有者。
-因此 `Vec<String>` 拥有它内部所有 `String` 元素的所有权。
+We try to take a value out of the `Vec<String>` type, but according to the ownership principle, every value can have only one owner.
+Therefore `Vec<String>` owns all the `String` elements inside it.
 
-当我们使用 `args[1]` 这样的方式访问时, 实际上是尝试将该元素的所有权 “移动” 到另一个变量。这就违反了所有权规则,
-因为 `args` 还可能在后续被使用, 如果移动了元素所有权, 那么会导致它内部状态不一致, 甚至出现悬垂指针、重复释放等问题。
+When we access an element such as `args[1]`, we are in fact trying to "move" the ownership of that element to another variable. That violates the ownership rules,
+because `args` may still be used later; if the ownership of an element were moved away, its internal state would become inconsistent, and problems such as dangling pointers or double frees could appear.
 
-### 引用和借用
+### References and Borrowing
 
-Rust 在其语言设计层面上“不信任开发者”, 因此它采用了所有权系统来强制保障内存安全。
-也因此编译器非常“智能”, 它不仅会告诉你哪里出错了, 还会提供修复建议。
+Rust "does not trust developers" at the language design level, so it adopts the ownership system to enforce memory safety.
+Because of this, the compiler is very "smart": it not only tells you where the error is, but also offers suggestions for fixing it.
 
-比如, 下面的编译错误信息中就给出了两种可能的解决方式:
+For example, the compilation error below gives two possible solutions:
 
 ```bash
 help: consider borrowing here
@@ -209,25 +211,25 @@ help: consider cloning the value if the performance cost is acceptable
   |                      ++++++++
 ```
 
-第一种方法是 `let title = &args[1];`, 它表示借用 `args[1]` 的值, 而不移动它的所有权。
-这种方式高效, 不会复制数据, 但是变量的类型将变为 `&String`, 表示这个变量是一个 `String` 值的引用。
-因此它将受到引用对象的限制。当 `args` 失效, 那么它的引用也将失效。
+The first approach is `let title = &args[1];`, which borrows the value of `args[1]` instead of moving its ownership.
+This approach is efficient and does not copy data, but the type of the variable becomes `&String`, meaning it is a reference to a `String` value.
+Therefore it is constrained by the referenced object: when `args` becomes invalid, its reference becomes invalid too.
 
-而第二种方法是 `let title = args[1].clone();`, 它表示克隆 `args[1]` 的值,
-并将这个值移动到 `title` 变量中, 这样 `args` 失效时, 也不会影响 `title` 的使用。
+The second approach is `let title = args[1].clone();`, which clones the value of `args[1]`
+and moves that value into the `title` variable, so that when `args` becomes invalid, using `title` is not affected.
 
-因此, 我们选择使用第二种方式, 显式调用 `clone` 方法, 克隆一份 `args[1]` 的值。
+Therefore we choose the second approach, explicitly calling the `clone` method to clone a copy of `args[1]`.
 
-> 创建一个引用的行为叫做借用。引用则是借用这个行为的结果。
+> Creating a reference is called borrowing. A reference is the result of that borrowing.
 
-我们再次运行 `cargo run -- a b`, 可以发现编译通过了。
+Running `cargo run -- a b` again, we can see that it compiles.
 
-### 可变变量
+### Mutable Variables
 
-在当前实现中, 每次运行程序都需要输入两个参数（标题和内容）, 否则程序会因索引越界而报错。
-为了提升程序的健壮性, 我们可以为缺失的参数设置默认值。
+In the current implementation, every run of the program requires two arguments (title and content), otherwise the program reports an error due to out-of-bounds indexing.
+To make the program more robust, we can set default values for missing arguments.
 
-修改代码:
+Modify the code:
 
 ```rust
 fn main() {
@@ -244,9 +246,9 @@ fn main() {
 }
 ```
 
-以上代码中, 我们对输入参数做了检查, 一旦参数数量大于 2 个, 就会使用第三个参数作为内容。否则就会使用默认值。
+In the code above we check the input arguments: as soon as the number of arguments is greater than 2, the third argument is used as the content; otherwise the default value is used.
 
-执行 `cargo run -- a`, 发现又有报错了。
+Executing `cargo run -- a`, we find another error.
 
 ```bash
 error[E0384]: cannot assign twice to immutable variable `content`
@@ -264,10 +266,10 @@ help: consider making this binding mutable
    |       +++
 ```
 
-这是因为 Rust 出于安全性和可读性考虑, 默认所有变量都是不可变的。
-这段报错的意思是: 不能对不可变变量 `content` 进行二次赋值, 除非将它声明为可变的。
+This is because, for the sake of safety and readability, Rust makes all variables immutable by default.
+The error means: you cannot assign to the immutable variable `content` a second time, unless it is declared mutable.
 
-编译器已经为我们提示了。在 `let` 后面增加 `mut` 关键字即可。
+The compiler has already given us the hint. Just add the `mut` keyword after `let`.
 
 ```rust
 fn main() {
@@ -284,22 +286,22 @@ fn main() {
 }
 ```
 
-再次执行 `cargo run -- a`, 成功运行。
+Executing `cargo run -- a` again, it runs successfully.
 
-### 变量类型
+### Variable Types
 
-Rust 是一门强类型的语言, 这意味着变量在编译时必须要有明确的类型。
+Rust is a strongly typed language, which means variables must have a definite type at compile time.
 
-类型确定方式有两种, 分别是显式声明和隐式推断。
+There are two ways to determine a type: explicit declaration and implicit inference.
 
-显式声明, 在变量名称后面使用 `:` 指定类型。
-例如: `let args: Vec<String> = std::env::args().collect();`。将变量 `args` 的类型指定为 `Vec<String>`。
+Explicit declaration uses `:` after the variable name to specify the type.
+For example: `let args: Vec<String> = std::env::args().collect();` specifies the type of the variable `args` as `Vec<String>`.
 
-隐式推断, 编译器根据变量的值和上下文推断变量的类型。
-而 Rust 有着强大的类型推断机制, 使得我们在大多数情况下, 不需要手动标注类型。
-编译器会自动推断类型, 只有当编译器无法推断类型时才需要手动标注。
+Implicit inference means the compiler infers the type of a variable from its value and context.
+Rust has a powerful type inference mechanism, so in most cases we do not need to annotate types manually.
+The compiler infers types automatically, and manual annotation is needed only when it cannot.
 
-例如以下代码中, 我们并未显式声明 `len`, `title` 或 `content` 的类型, 但它们的类型仍然是确定的:
+For example, in the code below we do not explicitly declare the types of `len`, `title`, or `content`, yet their types are still definite:
 
 ```rust
   let args: Vec<String> = std::env::args().collect();
@@ -308,36 +310,36 @@ Rust 是一门强类型的语言, 这意味着变量在编译时必须要有明�
   let mut content /* String */ = String::from("default content");
 ```
 
-Rust 支持常见的基本类型:
+Rust supports the usual primitive types:
 
-- 整型: `i8`, `i16`, `i32`, `i64`, `i128`, `isize`
-- 无符号整型: `u8`, `u16`, `u32`, `u64`, `u128`, `usize`
-- 浮点数: `f32`, `f64`
-- 布尔值: `bool`
-- 字符: `char`
+- Integers: `i8`, `i16`, `i32`, `i64`, `i128`, `isize`
+- Unsigned integers: `u8`, `u16`, `u32`, `u64`, `u128`, `usize`
+- Floating point numbers: `f32`, `f64`
+- Booleans: `bool`
+- Characters: `char`
 
-需要注意的是, Rust 中, `"xxx"` 是一个字符串字面量切片, 类型为 `&str`, 是在编译时就固定不可变的。
-而 `String` 是一个字符串类型, 编译时动态分配, 可变长度。
+Note that in Rust, `"xxx"` is a string literal slice whose type is `&str`, fixed and immutable at compile time.
+`String`, on the other hand, is a string type allocated dynamically at compile time with a variable length.
 
-我们在前面使用的 `args` 是 `Vec<String>`, 就是一个动态字符串的集合。
+The `args` we used earlier is a `Vec<String>`, which is a collection of dynamic strings.
 
-## 控制流
+## Control Flow
 
-所谓控制流, 就是控制程序的流程。
+Control flow means controlling the flow of a program.
 
-在没有控制流的情况下, 程序会按顺序从上往下逐行执行。
-而控制流语句可以让我们根据条件选择性地执行某段代码, 或者重复执行某段代码,
-从而让程序拥有判断和循环的能力。
+Without control flow, a program executes line by line, from top to bottom.
+Control flow statements let us selectively execute a block of code based on a condition, or repeatedly execute a block of code,
+which gives a program the ability to make decisions and loop.
 
-### if/else 分支
+### if/else Branches
 
-`if`/`else` 是 Rust 中最常用的控制流语句。
+`if`/`else` is the most commonly used control flow statement in Rust.
 
-它用于判断某个条件是否成立。
-它的判断条件必须返回布尔值, 而不是其他类型。
+It is used to test whether a condition holds.
+Its condition must return a boolean value, not any other type.
 
-如果判断条件成立, 则执行 `if` 后面的代码块。
-如果判断条件不成立, 则执行 `else` 后面的代码块。
+If the condition holds, the code block after `if` is executed.
+If the condition does not hold, the code block after `else` is executed.
 
 ```rust
   let mut content = String::from("default content");
@@ -347,10 +349,10 @@ Rust 支持常见的基本类型:
   }
 ```
 
-当参数格式多于两个时, 取第三个参数替换变量 `content` 的值。
-否则 `content` 不变。
+When there are more than two arguments, the third argument replaces the value of the variable `content`.
+Otherwise `content` keeps its value.
 
-需要注意的是, Rust 中的 `if` 是一个表达式。允许有返回值。因此以上代码可以改为:
+Note that `if` in Rust is an expression, so it is allowed to return a value. Therefore the code above can be changed to:
 
 ```rust
   let content = if len > 2 {
@@ -360,22 +362,22 @@ Rust 支持常见的基本类型:
   };
 ```
 
-以上代码意思是, 如果 `len > 2` 条件成立, 就使用 `args[2].clone()` 作为 `content` 的值。
-否则, 就使用 `String::from("default content")` 作为 `content` 的值。
+The code above means: if the condition `len > 2` holds, use `args[2].clone()` as the value of `content`;
+otherwise, use `String::from("default content")` as the value of `content`.
 
-> Rust 是一种表达式导向的语言, 实际上大部分的结构都可以返回值。
+> Rust is an expression-oriented language; in fact most constructs can return a value.
 
-### 循环
+### Loops
 
-Rust 中, 循环方式如下:
+In Rust, the looping constructs are:
 
-- `loop` 循环会一直执行, 直到遇到 `break` 语句。
-- `while` 循环会在条件成立的情况下执行。
-- `for` 循环会遍历一个集合中的所有元素。
+- A `loop` runs forever until it hits a `break` statement.
+- A `while` loop runs as long as its condition holds.
+- A `for` loop iterates over every element of a collection.
 
-我们将使用 `while` 实现一个交互式的命令行输入, 逐步获取 Todo 的标题与内容, 并确认是否创建该条 Todo。
+We will use `while` to implement an interactive command-line input that collects the Todo title and content step by step, and asks for confirmation before creating the Todo.
 
-修改 `main.rs` 代码如下:
+Modify the code in `main.rs` as follows:
 
 ```rust
 fn main() {
@@ -443,16 +445,16 @@ fn main() {
 }
 ```
 
-以上代码中, 我们使用了 `while` 循环来实现一个交互式, 用于创建 Todo 项的命令行程序。
+In the code above, we use a `while` loop to build an interactive command-line program for creating Todo items.
 
-我们使用了一个状态变量 `ok` 来控制循环, 当 `ok` 为 `false` 时, 循环会结束。
-并在用户输入的内容为空时, 使用 `continue` 语句来跳过当前循环。
+We use a state variable `ok` to control the loop: when `ok` is `false`, the loop ends.
+And when the content entered by the user is empty, we use the `continue` statement to skip the current iteration.
 
-如果改成 `loop` 循环的话如下所示:
+If it were changed to a `loop`, it would look like this:
 
 ```rust
 loop {
-  // 其他地方保持不变
+  // everything else stays the same
 
   if sure.trim().to_lowercase() != "n" {
     ok = false;
@@ -466,22 +468,22 @@ loop {
 }
 ```
 
-`while` 和 `loop` 都可以用来循环, 效果可以说是等价的。
+Both `while` and `loop` can be used for looping, and their effect can be said to be equivalent.
 
-两者区别在于:
+The difference between them is:
 
-- `while` 适合用于条件驱动的循环, 比如获取用户输入并确认。
-- `loop` 则更适合结构复杂, 需要手动控制循环的情况。例如游戏开发。
+- `while` suits condition-driven loops, such as reading user input and confirming it.
+- `loop` suits cases with more complex structure where the loop must be controlled manually, for example game development.
 
-现在, 执行 `cargo run -- create` 就可以进入交互式界面来创建 Todo 项了。
+Now, executing `cargo run -- create` takes you into an interactive interface for creating Todo items.
 
-### for 循环
+### for Loops
 
-`for` 循环常用于遍历一个数据集合。
+The `for` loop is commonly used to iterate over a collection.
 
-我们将为 CLI 程序增加一个 `list` 命令, 用于列出所有的 Todo 项。
+We will add a `list` command to the CLI program for listing all Todo items.
 
-修改 `main.rs` 如下:
+Modify `main.rs` as follows:
 
 ```rust
 fn main() {
@@ -506,55 +508,55 @@ fn main() {
 }
 ```
 
-相较于需要手动管理索引的 `while` 和 `loop`, `for` 可以更简洁安全的遍历数据集合。
-是 Rust 中处理数据集合的首选方式。
+Compared with `while` and `loop`, which require manual index management, `for` iterates over a collection more concisely and safely.
+It is the preferred way to process collections in Rust.
 
-## 切片和数组
+## Slices and Arrays
 
-在前面的代码中, 我们使用到了 `String` 类型和 `&str` 类型。
-可既然有 `&str` 那为什么要使用 `String` 呢?
+In the earlier code we used the `String` type and the `&str` type.
+But if `&str` exists, why use `String` at all?
 
-这是因为在 Rust 中, `String` 类型的字符串, 是一个动态长度的字符串, 可以在任意位置增加或减少字符。
-而 `&str` 类型的字符串, 是一个静态长度的字符串, 它的长度在编译时就确定了, 不能改变。
+Because in Rust, a string of type `String` is a dynamically sized string whose characters can be added or removed at any position,
+while a string of type `&str` is a statically sized string whose length is fixed at compile time and cannot be changed.
 
-`&str` 适用于只读借用, 而 `String` 适用于修改操作。
+`&str` suits read-only borrowing, while `String` suits modification.
 
-### 切片
+### Slices
 
-切片允许引用集合中的部分连续元素, 而不是整个集合。`&str` 类型就是一个字符串切片。
+A slice lets you reference part of a collection's consecutive elements instead of the whole collection. The `&str` type is exactly a string slice.
 
-切片的语法是 `&[start..end]`。其中 `start` 是切片的起始位置, `end` 是切片的结束位置。
-需要注意的是, 切片的范围是左闭右开区间, 即包含 `start` 位置, 不包含 `end` 位置。
+The slice syntax is `&[start..end]`, where `start` is the starting position of the slice and `end` is the ending position.
+Note that the slice range is half-open: it includes the `start` position and excludes the `end` position.
 
-例如: `let s = "hello world";`, `s` 就是一个字符串切片, 它的类型是 `&str`。
-`&s[0..5]` 表示获取字符串 `s` 的前 5 个字符, 即 `"hello"`。
+For example: with `let s = "hello world";`, `s` is a string slice whose type is `&str`.
+`&s[0..5]` means taking the first 5 characters of the string `s`, namely `"hello"`.
 
-边界是可以省略的, 从零开始可以写为: `&s[..5]`, 到结尾可以写为: `&s[6..]`。
+The bounds can be omitted: from zero it can be written as `&s[..5]`, and to the end as `&s[6..]`.
 
-> Rust 字符串是 UTF-8 编码, 切片时需要保证切在合法字符边界, 否则会导致程序崩溃。
+> Rust strings are UTF-8 encoded, so a slice must be cut at valid character boundaries, otherwise the program will panic.
 
-切片是相当常用的功能, 避免了复制从而提供效率, 也可以提供灵活视图操作。
+Slices are a very common feature: they avoid copying, which improves efficiency, and they provide a flexible view over data.
 
-### 数组
+### Arrays
 
-Rust 中的数组也是编译时固定长度, 要求所有元素类型相同, 性能较高, 使用 `let var: [type; length] = [];` 定义。
-例如: `let arr: [i32; 5] = [1, 2, 3, 4, 5];`, 声明了一个长度 5 的 `i32` 类型数组。
+Arrays in Rust also have a fixed length at compile time, require all elements to be of the same type, and offer high performance. They are defined with `let var: [type; length] = [];`.
+For example: `let arr: [i32; 5] = [1, 2, 3, 4, 5];` declares an array of type `i32` with length 5.
 
-如果需要使用动态的数组, Rust 提供了 `Vec<T>` 动态数组, 它的长度可以在运行时改变。常用于不定量数据, 例如用户输入, 命令行参数等。
-前面我们使用的 `Vec<String>` 就是这样的元素类型为 `String` 的动态数组。
+If you need a dynamic array, Rust provides the dynamic array `Vec<T>`, whose length can change at runtime. It is commonly used for a variable amount of data, such as user input and command-line arguments.
+The `Vec<String>` we used earlier is exactly such a dynamic array whose element type is `String`.
 
-## 模式匹配
+## Pattern Matching
 
-目前, 我们的 CLI 程序包含两个命令:
+At the moment our CLI program contains two commands:
 
-- `create`: 创建 Todo 项。
-- `list`: 查看 Todo 列表。
+- `create`: create a Todo item.
+- `list`: view the Todo list.
 
-但随着功能逐渐扩展, 代码也逐渐变得臃肿、不易维护。
+But as the features grow, the code gradually becomes bloated and hard to maintain.
 
-为了解决这个问题, Rust 提供了一种更为优雅强大的方式, 即模式匹配 `match`。
+To solve this problem, Rust offers a more elegant and powerful approach: pattern matching with `match`.
 
-我们可以使用 `match` 匹配输入内容, 根据不同的匹配进行相应的逻辑。
+We can use `match` to match against the input and run the corresponding logic for each match.
 
 ```rust
 fn main() {
@@ -586,37 +588,37 @@ fn main() {
 }
 ```
 
-通过以上代码, 我们不难发现, `match` 很像其他语言中的 `switch`,
-但是 Rust 的 `match` 则相对于 `switch` 更加强大。它可以:
+From the code above it is not hard to see that `match` resembles `switch` in other languages,
+but Rust's `match` is more powerful than `switch`. It can:
 
-- 匹配多种可能的值。
-- 支持变量绑定和解构。
-- 必须覆盖所有情况, 但允许使用 `_` 匹配所有。
-- 它同时是表达式, 可以返回值。
-- 支持守卫条件, 可以使用 `if` 增加条件限制。
+- Match multiple possible values.
+- Support variable binding and destructuring.
+- Cover all cases by requirement, while allowing `_` to match everything.
+- Be an expression at the same time, so it can return a value.
+- Support guard conditions, adding extra constraints with `if`.
 
-下面是一个简单的示例:
+Here is a simple example:
 
 ```rust
 let auth_level: i32 = 2;
 
-let role = match auth_level {   // 返回值给变量声明
-  0 => "Guest",                 // 单值匹配
-  1 | 2 => "User",              // 多值匹配
-  n if n >= 16 => "Admin",      // 守卫语句
-  _ => "Unknow"                 // 默认分支, 匹配所有剩余情况
+let role = match auth_level {   // the value is returned to the variable declaration
+  0 => "Guest",                 // single value match
+  1 | 2 => "User",              // multiple value match
+  n if n >= 16 => "Admin",      // guard clause
+  _ => "Unknow"                 // default branch, matches all remaining cases
 }
 ```
 
-## 结构体
+## Structs
 
-目前, 我们的 Todo 项分别有 Title 和 Content 两个属性。
+Right now, a Todo item has two separate attributes: Title and Content.
 
-为了更好的表达两者之间的关系, 我们可以使用 Rust 中的结构体将它们组织在一起。
+To express the relationship between them better, we can organize them together with a Rust struct.
 
-结构体是一种可以由我们自定义的数据类型。能够将多种字段打包在一起形成一个整体, 便于管理, 传递和扩展。
+A struct is a data type we can define ourselves. It packs multiple fields together into one whole, which makes them easier to manage, pass around, and extend.
 
-改造 `main.rs`。
+Rework `main.rs`.
 
 ```rust
 struct TodoItem {
@@ -649,17 +651,17 @@ fn main() {
 }
 ```
 
-以上代码中, 我们定义了一个名为 `TodoItem` 的结构体, 它包含了 `title` 和 `content` 两个属性, 分别代表 Todo 项的标题和内容。
+In the code above we defined a struct named `TodoItem`, containing the two attributes `title` and `content`, which represent the title and content of a Todo item.
 
-在 `main` 函数中, 我们用一个 `Vec<TodoItem>` 来保存多个 Todo 项, 每个 Todo 项都是一个结构体实例。
+In the `main` function we use a `Vec<TodoItem>` to store multiple Todo items, and each Todo item is an instance of the struct.
 
-当匹配到 `"list"` 命令时, 我们遍历 `todos` 列表, 打印每个 Todo 的标题和内容, 实现了简单的查看功能。
+When the `"list"` command is matched, we iterate over the `todos` list and print the title and content of each Todo, implementing a simple viewing feature.
 
-## 函数
+## Functions
 
-在先前的代码中, 我们定义了 `todos` 变量来存储 Todo 项, 并逐个实例化 Todo 项然后添加到 `todos` 中。
+In the earlier code we defined the `todos` variable to store Todo items, and instantiated Todo items one by one before adding them to `todos`.
 
-我们实例化 Todo 项的代码如下, 可以看到, 有些繁琐:
+The code that instantiates a Todo item looks like this, and as you can see, it is a bit tedious:
 
 ```rust
 TodoItem {
@@ -668,15 +670,15 @@ TodoItem {
 }
 ```
 
-为了避免每次都写重复的转换和构造过程, 我们可以使用 Rust 的函数。
+To avoid writing the same conversion and construction over and over, we can use Rust functions.
 
-函数是一段可以被重复调用的代码块。用于完成特定的任务。可以:
+A function is a block of code that can be called repeatedly, used to accomplish a specific task. It can:
 
-- 将某段功能独立出, 从而进行复用, 避免代码重复。
-- 通过函数名描述功能, 让代码结构清晰, 提升可读性。
-- 需要修改则只需要修改函数内部, 并不会影响外部调用, 增加了维护性和扩展性。
-- 通过传递不同参数, 来改变函数内部走向, 实现不同的功能。
-- 可以返回值, 实现外部与内部交互。
+- Isolate a piece of functionality so it can be reused, avoiding duplicated code.
+- Describe its purpose through its name, making the code structure clear and improving readability.
+- Require changes only inside the function, without affecting external callers, which improves maintainability and extensibility.
+- Change its internal behavior and implement different functionality by passing different arguments.
+- Return a value, enabling interaction between the outside and the inside.
 
 ```rust
 fn create_todo_item(title: &str, content: &str) -> TodoItem {
@@ -696,22 +698,22 @@ fn main() {
 }
 ```
 
-在以上示例中, `create_todo_item` 接受两个 `&str` 类型的参数。返回 `TodoItem` 类型。
-在它内部, 实现了将两个 `&str` 参数转换为 `String` 类型的值, 并绑定到 `TodoItem` 类型的实例上。
+In the example above, `create_todo_item` takes two arguments of type `&str` and returns a value of type `TodoItem`.
+Inside it, the two `&str` arguments are converted into `String` values and bound to an instance of type `TodoItem`.
 
-随后, 我们只需要使用 `create_todo_item("title", "content");` 就可以实例化一个 `TodoItem` 类型了。
+After that, we only need `create_todo_item("title", "content");` to instantiate a value of type `TodoItem`.
 
-相较于先前需要手动指定结构体类型、列出所有字段并逐一进行字符串转换的写法, 使用函数可以大大减少重复代码, 提升开发效率。
+Compared with the earlier approach of manually specifying the struct type, listing every field, and converting each string one by one, using a function greatly reduces duplicated code and improves development efficiency.
 
-通过封装 `create_todo_item` 函数, 我们只需要传入标题和内容两个参数, 就能快速创建一个 `TodoItem` 实例, 既简洁, 又易于阅读和维护。
+By encapsulating the `create_todo_item` function, we only need to pass in the title and content to quickly create a `TodoItem` instance, which is both concise and easy to read and maintain.
 
-这样的封装方式在实际开发中非常常见, 也体现了函数抽象的核心思想: 隐藏实现细节, 对外暴露清晰的接口。
+This style of encapsulation is very common in real development, and it reflects the core idea of function abstraction: hide the implementation details and expose a clear interface.
 
-### 函数返回值
+### Function Return Values
 
-在 `create_todo_item` 中, 我们使用了 `return` 关键字返回了一个 `TodoItem` 类型的实例。
+In `create_todo_item` we used the `return` keyword to return an instance of type `TodoItem`.
 
-但是实际上, 我们其实可以不使用 `return` 关键字, 将函数改为:
+But in fact, we do not need the `return` keyword at all. The function can be changed to:
 
 ```rust
 fn create_todo_item(title: &str, content: &str) -> TodoItem {
@@ -722,21 +724,21 @@ fn create_todo_item(title: &str, content: &str) -> TodoItem {
 }
 ```
 
-将行尾的 `;` 分号去掉, 就可以返回数据了。这是因为 Rust 默认将函数体中最后一个表达式的值作为返回值。
-我们将行尾的 `;` 分号去掉了, 就将语句改为了表达式, 于是 Rust 可以将这个表达式的值作为返回值。
+Removing the trailing `;` makes it possible to return data. That is because Rust takes the value of the last expression in the function body as the return value by default.
+By removing the trailing `;`, we turn a statement into an expression, so Rust can use the value of that expression as the return value.
 
-如果需要提前返回，才需要使用 `return` 关键字。
+The `return` keyword is needed only when you want to return early.
 
-### 元组
+### Tuples
 
-元组是多种类型组合在一起形成的复合类型。长度和顺序都是固定的。
-我们可以简单的将元组视为一个不能改变类型顺序的数组。
+A tuple is a compound type formed by combining multiple types. Both its length and its order are fixed.
+We can simply think of a tuple as an array whose type order cannot be changed.
 
 ```rust
 let tup: (i32, f64, &str) = (1, 1.0, "1");
 ```
 
-元组允许使用 `.` 访问内容。
+Tuples allow their contents to be accessed with `.`.
 
 ```rust
 let a = tup.0
@@ -744,44 +746,44 @@ let b = tup.1
 let c = tup.2
 ```
 
-常用于包装多个值并供给其他地方使用。
+They are often used to wrap multiple values and hand them to other places.
 
-### 单元类型
+### The Unit Type
 
-Rust 的单元类型只有一个值, 即 `()`。
-它实际上是一个特殊元组, 但需要注意的是, Rust 中元组一定不能为空, 为空就不是元组了。
+The unit type in Rust has exactly one value, `()`.
+It is actually a special tuple, but note that a tuple in Rust must never be empty; if it is empty, it is no longer a tuple.
 
-通常, 单元类型被用来表示无返回值。
+Usually, the unit type is used to mean "no return value".
 
-没有返回值的函数实际上相当于默认返回了一个空元组 `()`。
+A function with no return value is in fact equivalent to returning an empty tuple `()` by default.
 
-## 模块化
+## Modules
 
-随着程序逐渐复杂, 我们的 `main.rs` 文件中的代码越来越多, 所有的逻辑都堆在一起, 不仅可读性差, 也不利于维护和扩展。
+As the program grows more complex, our `main.rs` file accumulates more and more code, with all the logic piled together, which hurts readability and makes maintenance and extension harder.
 
-在 Rust 中, 模块化是一种常见的代码组织方式。通过将代码拆分成多个文件, 让每个文件负责不同的功能。
-可以让代码结构更加清晰, 职责划分明确。
+In Rust, modularization is a common way to organize code: split the code into multiple files and let each file take care of a different piece of functionality.
+That makes the code structure clearer and the division of responsibilities explicit.
 
-目前, 我们的项目结构如下:
+At the moment, our project structure looks like this:
 
 ```bash
 |- src/
   |- main.rs
 ```
 
-新建一些文件, 项目结构如下:
+Create some new files, and the project structure becomes:
 
 ```bash
 |- src/
-  |- todo/        # todo 模块目录
-    |- core.rs    # todo 核心逻辑
-    |- create.rs  # create todo 命令
-    |- list.rs    # list todo 命令
-  |- main.rs      # 程序入口
-  |- todo.rs      # 子模块声明
+  |- todo/        # todo module directory
+    |- core.rs    # todo core logic
+    |- create.rs  # create todo command
+    |- list.rs    # list todo command
+  |- main.rs      # program entry point
+  |- todo.rs      # submodule declarations
 ```
 
-### 访问修饰符
+### Access Modifiers
 
 ```rust
 // src/todo/core.rs
@@ -808,9 +810,9 @@ pub fn get_todo_list() -> Vec<TodoItem> {
 }
 ```
 
-在以上代码中, 我们可以看见, 不论是结构体还是函数, 在声明前面都有着一个 `pub` 关键字。`pub` 表示该结构体或函数是公开的, 其他模块可以访问。
+In the code above you can see that whether it is a struct or a function, there is a `pub` keyword before its declaration. `pub` means the struct or function is public and other modules can access it.
 
-Rust 中, 默认所有内容都是私有的, 如果不添加 `pub`, 则该内容只能在当前模块中访问。
+In Rust, everything is private by default; without `pub`, the item can only be accessed inside the current module.
 
 ```rust
 // src/todo/create.rs
@@ -884,7 +886,7 @@ pub fn create_todo() {
 }
 ```
 
-### 模块路径解析
+### Module Path Resolution
 
 ```rust
 // src/todo/list.rs
@@ -897,21 +899,21 @@ pub fn list_todo(todos: &Vec<TodoItem>) {
 }
 ```
 
-在以上代码中, 可以看见 `use super::core::TodoItem;` 这行语句。
-这是在引用其他模块的内容。
+In the code above you can see the statement `use super::core::TodoItem;`.
+It is importing content from another module.
 
-Rust 使用文件夹路径的方式来引用不同的模块内容, 并提供了三种路径前缀:
+Rust uses folder-like paths to reference the contents of different modules, and provides three path prefixes:
 
-- `super`, 表示当前模块的父模块。
-- `self`, 表示当前模块自身。
-- `crate`, 表示当前根模块, 即 `src` 目录, 如果是第三方库，则替换为库名称。
+- `super`, which means the parent module of the current module.
+- `self`, which means the current module itself.
+- `crate`, which means the current root module, i.e. the `src` directory; for a third-party library, it is replaced by the library name.
 
-回到 `use super::core::TodoItem;`, 我们可以得知它的作用是引用 `list` 模块的父模块下的子模块 `core` 的 `TodoItem` 并使用它。
-换句话说, 它的作用是从兄弟模块 `core` 引入 `TodoItem` 并使用。
+Going back to `use super::core::TodoItem;`, we can tell that it imports and uses `TodoItem` from the `core` submodule of the parent module of the `list` module.
+In other words, it brings `TodoItem` in from the sibling module `core`.
 
-> 引用的内容必须使用 `pub` 关键字公开, 否则无法引用。
+> Imported content must be made public with the `pub` keyword, otherwise it cannot be imported.
 
-### 模块声明
+### Module Declarations
 
 ```rust
 // src/todo.rs
@@ -920,18 +922,18 @@ pub mod create;
 pub mod list;
 ```
 
-我们可以使用 `mod` 关键字来声明子模块。同样的, 子模块需要 `pub` 关键字修饰来公开给外部访问。
+We can declare submodules with the `mod` keyword. Likewise, a submodule needs the `pub` keyword to be exposed to the outside.
 
-在 Rust 中, 每个模块都有一个 `mod.rs` 文件, 该文件是模块的入口文件。
-在 `mod.rs` 文件中, 我们可以定义模块的公开内容, 如结构体、函数、模块等。
+In Rust, every module has a `mod.rs` file, which is the entry file of the module.
+In a `mod.rs` file we can define the module's public content, such as structs, functions, and submodules.
 
-如果使用的 `rustc` 版本在 1.30 以前, 那么这是唯一声明模块入口的方法。
+If the `rustc` version in use is older than 1.30, this is the only way to declare a module entry.
 
-但如果是在 1.30 以后, 那么可以在模块同级位置创建一个同名的 `.rs` 文件来作为模块入口声明。
+But from 1.30 onwards, you can create a `.rs` file with the same name as the module, next to the module directory, and use it as the module entry declaration.
 
-这里使用的就是使用与模块同名的 `.rs` 文件作为模块入口声明。
+That is exactly what is used here: a `.rs` file named after the module serves as the module entry declaration.
 
-需要注意的是, 模块是可以直接声明的, 而无需单独文件。
+Note that a module can also be declared inline, without a separate file.
 
 ```rust
 pub mod list {
@@ -963,46 +965,46 @@ fn main() {
 }
 ```
 
-## 数据持久化
+## Data Persistence
 
-目前, 我们的任务数据是保存在内存中的。当程序退出时, 这些数据会随之消失。
+At the moment our task data is kept in memory. When the program exits, that data disappears with it.
 
-为了让用户的数据在下次启动程序时依然可用, 我们需要将数据持久化, 也就是保存到磁盘上。
+To make the user's data available the next time the program starts, we need to persist the data, that is, save it to disk.
 
-一个简单且常见的做法是: 将数据保存到一个文件中。程序启动时从文件中读取任务列表, 退出或修改数据时再将更新后的任务保存回文件。
+A simple and common approach is to save the data in a file: read the task list from the file when the program starts, and write the updated tasks back to the file when the program exits or the data changes.
 
-要实现这一功能, 我们需要先让数据支持序列化与反序列化。
+To implement this, we first need to make the data support serialization and deserialization.
 
-- 序列化是指将结构体等内存对象转换为可保存的格式。
-- 反序列化则是将这些格式转换回结构体对象。
+- Serialization is converting in-memory objects such as structs into a storable format.
+- Deserialization is converting such a format back into struct objects.
 
-### 添加依赖
+### Adding Dependencies
 
-在实际开发中, 我们通常会将常用的一些功能给封装起来, 方便后续重复使用。
+In real development we usually encapsulate commonly used functionality so it can be reused later.
 
-更进一步的就是将这些功能封装为一个库包给发布到网络中, 让其他人也可以使用。
-如果项目中有用到某个库包, 那么说明项目依赖于这个库包。这个库包就是项目的依赖。
+Going one step further, such functionality can be packaged as a library and published online so others can use it too.
+If a project uses such a library, the project depends on it, which makes it a dependency of the project.
 
-`cargo` 就是 Rust 的库包管理工具。我们可以通过它安装项目依赖库包。
+`cargo` is Rust's package management tool. We can use it to install the library packages a project depends on.
 
-为了让 `TodoItem` 能被正确地序列化/反序列化, 我们需要引入第三方库 `Serde` 以及 `serde_json`。
+To make `TodoItem` serialize/deserialize correctly, we need to bring in the third-party libraries `Serde` and `serde_json`.
 
-在项目根目录下执行命令:
+Run the following commands in the project root directory:
 
 ```bash
-cargo add serde --features derive     # 增加 serde 依赖, 并开启 derive 功能
-cargo add serde_json                  # 增加 serde_json 依赖
+cargo add serde --features derive     # add the serde dependency and enable the derive feature
+cargo add serde_json                  # add the serde_json dependency
 ```
 
-> serde 是一个强大的序列化/反序列化库, 它支持多种格式, 包括 JSON、YAML 等。
+> serde is a powerful serialization/deserialization library supporting many formats, including JSON and YAML.
 >
-> 而 serde_json 则是基于 JSON 格式的实现。
+> serde_json is the implementation based on the JSON format.
 
-### 为结构体实现方法
+### Implementing Methods for a Struct
 
-在 Rust 中, 我们可以使用 `impl` 关键字为结构体定义方法, 将结构体和它的行为组织在一起。
+In Rust we can use the `impl` keyword to define methods for a struct, organizing the struct and its behavior together.
 
-我们来为 `TodoItem` 添加创建、序列化和反序列化的方法:
+Let us add creating, serializing, and deserializing methods to `TodoItem`:
 
 ```rust
 // src/todo/core.rs
@@ -1030,39 +1032,39 @@ impl TodoItem {
 }
 ```
 
-我们在结构体上添加了 `#[derive(Serialize, Deserialize)]` 派生宏,
-这会自动为 `TodoItem` 实现 `Serde` 所需的转换逻辑。避免了手动实现的复杂性。
+We added the `#[derive(Serialize, Deserialize)]` derive macro to the struct,
+which automatically implements the conversion logic `Serde` needs for `TodoItem`, avoiding the complexity of implementing it by hand.
 
-此外, 我们还添加了:
+In addition, we added:
 
-- `new` 方法: 用于创建一个新的 `TodoItem`, 现在可以直接用 `TodoItem::new(...)` 替代之前的 `create_todo_item(...)`。
-- `serializer` 方法: 将当前实例转换为 JSON 字符串。
-- `deserializer` 方法: 从 JSON 字符串还原为 `TodoItem` 实例。
+- The `new` method: creates a new `TodoItem`; `TodoItem::new(...)` can now replace the earlier `create_todo_item(...)`.
+- The `serializer` method: converts the current instance into a JSON string.
+- The `deserializer` method: restores a `TodoItem` instance from a JSON string.
 
-通过这种方式, 我们就为 `TodoItem` 实现了基本的序列化与反序列化功能。接下来, 我们就可以在程序中使用文件来保存和读取任务数据了。
+In this way we have given `TodoItem` basic serialization and deserialization. Next, we can use files in the program to save and read task data.
 
-### self 和 Self
+### self and Self
 
-在上方代码中, 我们可以在结构体实例函数的参数处看见 `self` 关键字。
-它表示当前实例。相当于其他语言中的 `this`, `self`。
+In the code above you can see the `self` keyword in the parameter list of the struct's instance methods.
+It refers to the current instance, equivalent to `this` or `self` in other languages.
 
-我们可以通过 `self.title`, `self.content` 这样的方式来访问当前实例属性。
+We can access the attributes of the current instance through `self.title`, `self.content`, and so on.
 
-除此之外, 它与其他参数并没有什么区别。
+Other than that, it is no different from any other parameter.
 
-而 `Self` 则表示当前类型。等价于直接使用类型名称。
-但可以在类型重命名等情况下保持代码不变, 使得代码更具有稳定性和可读性。
+`Self`, on the other hand, refers to the current type. It is equivalent to using the type name directly,
+but it keeps the code unchanged under circumstances such as type renaming, which makes the code more stable and readable.
 
-### 文件操作
+### File Operations
 
-现在, 我们已经实现了 `TodoItem` 的序列化和反序列化。接下来, 我们需要将数据存储到文件中, 实现持久化。
+We have now implemented serialization and deserialization for `TodoItem`. Next, we need to store the data in a file to achieve persistence.
 
-Rust 提供了标准库 `std::fs` 用于文件读写。我们将使用它实现以下两个功能:
+Rust provides the standard library `std::fs` for reading and writing files. We will use it to implement the following two features:
 
-- 保存 Todo 列表到文件。
-- 读取 Todo 列表到程序。
+- Save the Todo list to a file.
+- Read the Todo list into the program.
 
-增加 `src/todo/storage.rs` 文件, 并在 `src/todo.rs` 中声明并公开该模块。
+Add the file `src/todo/storage.rs`, and declare and expose that module in `src/todo.rs`.
 
 ```rust
 // src/todo/storage.rs
@@ -1084,7 +1086,7 @@ pub fn read_todo_list(save_file: &str) -> Vec<TodoItem> {
     }
   }
 
-  // 如果没有读取到任何数据, 提供默认示例
+  // if no data was read, provide default examples
   if result.len() == 0 {
     result.push(TodoItem::new("learn rust", "read rust book"));
     result.push(TodoItem::new("work", "complete required"));
@@ -1100,7 +1102,7 @@ pub fn save_todo_list(save_file: &str, todos: &Vec<TodoItem>) {
 }
 ```
 
-修改 `create_todo`,为 `todos` 根据用户输入添加 `TodoItem`:
+Modify `create_todo` so it adds a `TodoItem` to `todos` based on user input:
 
 ```rust
 // src/todo/create.rs
@@ -1139,18 +1141,18 @@ fn main() {
 }
 ```
 
-这样, 当我们执行以下命令时:
+That way, when we run the following commands:
 
 ```bash
-cargo run -- list    # 显示 Todo 列表（包括初始默认内容）
-cargo run -- create  # 添加 Todo 项（修改会被保存）
+cargo run -- list    # show the Todo list (including the initial default content)
+cargo run -- create  # add a Todo item (the change is saved)
 ```
 
-数据将自动从 `todo.json` 读取并写入, 实现完整的本地持久化。
+Data is automatically read from and written to `todo.json`, giving us complete local persistence.
 
-## 枚举
+## Enums
 
-目前, 我们的程序通过匹配 `args[1]` 实现 `create` 与 `list` 两个命令:
+At the moment our program implements the `create` and `list` commands by matching on `args[1]`:
 
 ```rust
 match args[1].as_str() {
@@ -1160,40 +1162,40 @@ match args[1].as_str() {
 }
 ```
 
-虽然简单直观, 但这种基于字符串的匹配存在如下问题:
+Although simple and intuitive, this string-based matching has the following problems:
 
-- 命令数量增加后, `match` 分支会变得冗长。
-- 容易因拼写错误而出错, 缺乏类型保障。
-- 命令的参数结构难以统一组织和扩展。
-- 无法自动生成 --help 等提示信息。
+- As commands are added, the `match` branches become long-winded.
+- Typos easily cause errors, with no type guarantees.
+- The argument structure of commands is hard to organize and extend uniformly.
+- Help messages such as --help cannot be generated automatically.
 
-为解决此问题, 我们将结合 Rust 的枚举和引入第三方库 `clap` 来构建维护性和扩展性更强的 CLI 程序。
+To solve this, we will combine Rust enums with the third-party library `clap` to build a CLI program that is easier to maintain and extend.
 
-> clap 是一个强大的 Rust 库, 用于解析命令行参数。它支持自动生成命令行参数的帮助信息, 并支持丰富的参数类型和校验规则。
+> clap is a powerful Rust library for parsing command-line arguments. It can generate help information for command-line arguments automatically and supports a rich set of argument types and validation rules.
 
-在项目根目录执行命令:
+Run the following command in the project root directory:
 
 ```bash
-cargo add clap --features derive # 增加依赖并启用 derive 功能
+cargo add clap --features derive # add the dependency and enable the derive feature
 ```
 
-### 为什么使用枚举
+### Why Use Enums
 
-枚举, 在各种编程语言中或多或少都有着它的身影。
+Enums appear in more or less every programming language.
 
-它的作用是用于表示一组有限的、互斥的可能取值, 例如周一到周日, 性别等。
+Their purpose is to represent a finite set of mutually exclusive possible values, such as Monday through Sunday, or gender.
 
-与其他语言的枚举相比, Rust 的枚举更加灵活和强大:
+Compared with enums in other languages, Rust enums are more flexible and powerful:
 
-- 支持每个变体携带不同的数据。
-- 可与模式匹配强结合, 做复杂的控制流。
-- 可以和 `trait`、方法一起使用, 实现丰富的抽象设计。
+- Each variant can carry different data.
+- They combine strongly with pattern matching for complex control flow.
+- They can be used together with `trait`s and methods to build rich abstractions.
 
-这使得枚举天然适合表示 CLI 的命令结构: 每个命令对应一个枚举变体, 每个变体携带所需参数。
+This makes enums a natural fit for representing the command structure of a CLI: each command corresponds to an enum variant, and each variant carries the arguments it needs.
 
-### 声明枚举
+### Declaring Enums
 
-Rust 中的枚举使用 `enum` 关键字声明。
+Enums in Rust are declared with the `enum` keyword.
 
 ```rust
 // src/todo/core.rs
@@ -1208,12 +1210,12 @@ pub enum TodoCommand {
 }
 ```
 
-以上代码定义了一个名为 `TodoCommand` 的枚举, 它有两个枚举值, 分别是 `Create` 和 `List`。
-我们使用了派生宏 `#[derive(Debug, Clone, Subcommand)]` 为枚举自动实现 `Debug`、`Clone` 和 `Subcommand` 三个特征。
+The code above defines an enum named `TodoCommand` with two values, `Create` and `List`.
+We used the derive macro `#[derive(Debug, Clone, Subcommand)]` to automatically implement three traits for the enum: `Debug`, `Clone`, and `Subcommand`.
 
-`Subcommand` 特征告诉 `clap` 该枚举对应一个子命令。
+The `Subcommand` trait tells `clap` that this enum corresponds to a subcommand.
 
-### 解析命令行参数
+### Parsing Command-line Arguments
 
 ```rust
 //src/main.rs
@@ -1244,13 +1246,13 @@ fn main() {
 }
 ```
 
-以上代码中, 我们定义了一个 `Program` 结构体, 它有一个字段 `command` 用于接收子命令。
+In the code above we defined a `Program` struct with a field `command` that receives the subcommand.
 
-`#[command(version, about, long_about = "Todo Cli")]` 告诉 `clap` 自动生成 --version 和 --help 两个参数。
+`#[command(version, about, long_about = "Todo Cli")]` tells `clap` to generate the `--version` and `--help` arguments automatically.
 
-`#[command(subcommand)]` 告诉 `clap` 该字段对应一个子命令。
+`#[command(subcommand)]` tells `clap` that this field corresponds to a subcommand.
 
-运行 `cargo run -- --help` 可以看到自动生成的帮助信息:
+Running `cargo run -- --help` shows the generated help information:
 
 ```bash
 Todo Cli
@@ -1270,44 +1272,44 @@ Options:
           Print version
 ```
 
-### Rust 注释
+### Rust Comments
 
-在上面的例子中, 我们给 TodoCommand 的每个枚举项添加了文档注释。
-但是当我们运行 `--help` 时, 注释内容却自动出现在帮助信息中。
+In the example above, we added doc comments to each variant of TodoCommand.
+But when we run `--help`, the comment content automatically appears in the help information.
 
-这可能让人疑惑: 我们只是加了一些注释, 为什么这些注释会出现在运行时输出的帮助信息里？
+This may be puzzling: we only added some comments, so why do they appear in the help output at runtime?
 
-这是因为在 Rust 中的注释有三种形式。
+That is because there are three forms of comments in Rust.
 
 ```rust
-// 单行注释（不会被编译器解析）
-// 在 // 的所有内容都会被注释
+// single-line comment (not parsed by the compiler)
+// everything after // is commented out
 
 /*
-多行注释
-只有在 /* */ 范围内的内容才会被注释
-（也不会被编译器解析）
+multi-line comment
+only content within /* */ is commented out
+(also not parsed by the compiler)
 */
 
-/// 文档注释（会被编译器和工具识别）
+/// doc comment (recognized by the compiler and tools)
 
 /**
- * 这也是文档注释
- * 以 /** 开头
+ * this is also a doc comment
+ * it starts with /**
 */
 ```
 
-我们用到的就是 `/// xxx` 即文档注释。它是编译器可识别的元信息。
-文档注释的内容会被编译器和第三方工具解析为注释对象的文档说明。
+What we used is `/// xxx`, a doc comment. It is meta-information the compiler can recognize.
+The content of a doc comment is parsed by the compiler and third-party tools as the documentation of the item it is attached to.
 
-`clap` 通过它的派生宏 `#[derive(Subcommand)]` 来在编译期间获取结构体和枚举的元信息, 其中就有文档注释。
-因此, 文档注释的内容会出现在运行时输出的帮助信息里。
+`clap` uses its derive macro `#[derive(Subcommand)]` to read the meta-information of structs and enums at compile time, and doc comments are part of that.
+That is why the content of doc comments shows up in the help information printed at runtime.
 
-### 枚举变体
+### Enum Variants
 
-Rust 的枚举是支持携带数据的。
+Rust enums support carrying data.
 
-改造 `TodoCommand`。
+Rework `TodoCommand`.
 
 ```rust
 #[derive(Debug, Clone, Subcommand)]
@@ -1322,13 +1324,13 @@ pub enum TodoCommand {
 }
 ```
 
-我们在 `Create` 枚举值中增加了两个字段 `title` 和 `content`。
+We added two fields, `title` and `content`, to the `Create` variant.
 
-分别对应 `--title` 和 `--content` 参数。
+They correspond to the `--title` and `--content` arguments respectively.
 
-`#[arg(short, long)]` 告诉 `clap` 该字段对应一个参数, 并指定参数的短名称和长名称。
+`#[arg(short, long)]` tells `clap` that the field corresponds to an argument, and specifies its short and long names.
 
-执行 `cargo run -- create --help`, 可以看到自动生成的帮助信息:
+Running `cargo run -- create --help` shows the help information generated automatically:
 
 ```bash
 Create a new todo item
@@ -1341,7 +1343,7 @@ Options:
   -h, --help               Print help
 ```
 
-修改 `create_todo` 方法。
+Modify the `create_todo` method.
 
 ```rust
 pub fn create_todo(todos: &mut Vec<TodoItem>, title: String, content: String) {
@@ -1360,8 +1362,8 @@ pub fn create_todo(todos: &mut Vec<TodoItem>, title: String, content: String) {
 }
 ```
 
-模式匹配是相当强大的, 可以将枚举值的字段解构出,
-修改 `main.rs`:
+Pattern matching is quite powerful: it can destructure the fields of an enum value.
+Modify `main.rs`:
 
 ```rust
 // ...
@@ -1372,16 +1374,16 @@ pub fn create_todo(todos: &mut Vec<TodoItem>, title: String, content: String) {
 // ...
 ```
 
-随后, 我们就可以使用 `cargo run -- create --title t --content c` 来创建 Todo 而不需要进入交互式界面了。
+After that, we can use `cargo run -- create --title t --content c` to create a Todo without entering the interactive interface.
 
-### 可选参数
+### Optional Arguments
 
-目前, 我们的 `create` 命令的参数都是必填的。
-但是这样我们没法区分到底是使用命令行参数还是交互式界面来创建 Todo 项。
+At the moment, the arguments of our `create` command are all required.
+But that way we cannot tell whether the user wants to create a Todo from command-line arguments or through the interactive interface.
 
-因此我们需要使用可选参数。
+So we need optional arguments.
 
-Rust 提供了一个 `Option<T>` 类型的枚举。
+Rust provides an enum of type `Option<T>`.
 
 ```rust
 pub enum Option<T> {
@@ -1390,9 +1392,9 @@ pub enum Option<T> {
 }
 ```
 
-可以看见, 枚举 `Option<T>` 就有两个枚举值。分别是 `Some(T)` 和 `None`, 分别代表有值和无值。
+As you can see, the `Option<T>` enum has two values: `Some(T)` and `None`, representing a value being present or absent.
 
-将 `TodoCommand` 枚举改为如下内容:
+Change the `TodoCommand` enum to the following:
 
 ```rust
 #[derive(Debug, Clone, Subcommand)]
@@ -1409,7 +1411,7 @@ pub enum TodoCommand {
 }
 ```
 
-随后修改 `create_todo` 方法。
+Then modify the `create_todo` method.
 
 ```rust
 pub fn create_todo(todos: &mut Vec<TodoItem>, title: Option<String>, content: Option<String>) {
@@ -1435,20 +1437,20 @@ pub fn create_todo(todos: &mut Vec<TodoItem>, title: Option<String>, content: Op
   // ...
 ```
 
-改造完毕后, 我们的 `create` 命令可以不指定参数进入交互式界面创建 Todo, 也可以指定参数直接创建 Todo 了。
+With that rework done, our `create` command can either enter the interactive interface with no arguments, or create a Todo directly from arguments.
 
-### 泛型
+### Generics
 
-在前面的例子中, 我们使用了 `Option<String>` 来表示将参数变得可选。
-那么, `Option<T>` 中的 `T` 是从哪里来的？为什么我们只需要将 `T` 替换为 `String`, 就能让参数变得可选？
+In the earlier examples we used `Option<String>` to make the arguments optional.
+So where does the `T` in `Option<T>` come from, and why does replacing `T` with `String` make the argument optional?
 
-因为这里的 `T` 是一个泛型。它并不是某个具体的值, 而是作为一个占位符被用来指代一个将来会具体指定的类型。
+Because `T` here is a generic. It is not a concrete value, but a placeholder standing for a type that will be specified later.
 
-Rust 是一门静态类型语言, 拥有强大而灵活的类型系统。
-为了保证类型安全, Rust 要求在编译期间就确定所有变量和参数的类型。
-这虽然增强了代码的可靠性, 但也带来了一个问题: 我们往往需要为不同的类型编写大量结构相似但类型不同的代码。
+Rust is a statically typed language with a powerful and flexible type system.
+To guarantee type safety, Rust requires the types of all variables and arguments to be determined at compile time.
+That improves the reliability of the code, but it also brings a problem: we often have to write large amounts of structurally similar code that differs only in type.
 
-例如翻转一个元组, 如果不使用泛型, 将是这样的。
+For example, reversing a tuple without generics looks like this.
 
 ```rust
 fn reverse_i8_tuple(tuple: (i8, i8)) -> (i8, i8) {
@@ -1462,14 +1464,14 @@ fn reverse_u8_tuple(tuple: (u8, u8)) -> (u8, u8) {
 }
 ```
 
-为了解决类型重复的问题, 许多静态类型语言都引入了泛型这一机制, Rust 也不例外。
-泛型允许我们编写与具体类型无关的通用代码, 从而在保持类型安全的同时避免重复劳动。
+To solve the problem of duplicated types, many statically typed languages introduced generics, and Rust is no exception.
+Generics let us write general code independent of concrete types, avoiding duplicated work while keeping type safety.
 
-当我们将 `String` 传入 `Option<T>`,  `Option<T>` 就变成了 `Option<String>`。`T` 从一个广泛的类型收缩为一个明确的 `String` 类型。
+When we pass `String` into `Option<T>`, `Option<T>` becomes `Option<String>`. `T` narrows from a broad type to the definite type `String`.
 
-我们需要为每个类型单独实现一个方法。
+Without generics we would need to implement a separate method for each type.
 
-但如果使用泛型, 在需要泛型的内容后面追加一个 `<T>` 即可:
+But with generics, we only need to append a `<T>` after the item that uses it:
 
 ```rust
 fn reverse<T>(args: (T, T)) -> (T, T) {
@@ -1478,17 +1480,17 @@ fn reverse<T>(args: (T, T)) -> (T, T) {
 }
 ```
 
-于是, 我们就可以使用 `reverse` 方法来翻转任意类型的元组了。
+Then we can use the `reverse` method to reverse a tuple of any type.
 
 ```rust
 let a = reverse((1, 2));
 let b = reverse(("a", "b"));
 ```
 
-需要注意的是, `T` 并不是固定的名称, 只是约定成俗将泛型参数命名为 `T`。
-只要开发者愿意, 那么将泛型可以是任何符合变量命名规则的名称。
+Note that `T` is not a fixed name; it is merely the conventional name for a generic parameter.
+If a developer prefers, a generic can have any name that follows the variable naming rules.
 
-下面的示例展示了如何使用多个自定义命名的泛型参数:
+The following example shows how to use multiple generics with custom names:
 
 ```rust
 fn reverse<Rust_1, Rust_2>(args: (Rust_1, Rust_2)) -> (Rust_2, Rust_1) {
@@ -1499,7 +1501,7 @@ fn reverse<Rust_1, Rust_2>(args: (Rust_1, Rust_2)) -> (Rust_2, Rust_1) {
 
 ### if let
 
-在前面的代码中, 我们对可选参数进行了模式匹配。
+In the earlier code we pattern matched the optional arguments.
 
 ```rust
 match title {
@@ -1512,11 +1514,11 @@ match title {
 }
 ```
 
-虽然功能正确, 但代码稍显冗长, 尤其当我们只关心某一个具体模式时。
+Although it works, the code is a bit long-winded, especially when we only care about one specific pattern.
 
-Rust 提供了一个 `if let` 语法糖, 用来匹配并解构某个特定的枚举变体, 而忽略其他所有可能的枚举值。
+Rust provides the `if let` syntactic sugar, used to match and destructure one particular enum variant while ignoring all other possible values.
 
-于是我们可以将 `create_todo` 改为这样:
+So we can change `create_todo` to this:
 
 ```rust
 pub fn create_todo(todos: &mut Vec<TodoItem>, title: Option<String>, content: Option<String>) {
@@ -1536,14 +1538,14 @@ pub fn create_todo(todos: &mut Vec<TodoItem>, title: Option<String>, content: Op
   // ...
 ```
 
-这段代码的意思是如果 `title` 可以匹配出 `Some(arg_title)`, 则将 `arg_title` 解构出并判断是否为空。
-而如果无法匹配, 则什么都不做。
+This code means: if `title` matches `Some(arg_title)`, destructure `arg_title` and check whether it is empty.
+If it does not match, do nothing.
 
-可以看见, 相较于之前, 代码简化了不少。
+As you can see, the code is much simpler than before.
 
-## 错误处理
+## Error Handling
 
-在进行数据持久化时, 我们编写了 `save_todo_list` 方法。
+While implementing data persistence, we wrote the `save_todo_list` method.
 
 ```rust
 pub fn save_todo_list(save_file: &str, todos: &Vec<TodoItem>) {
@@ -1552,39 +1554,39 @@ pub fn save_todo_list(save_file: &str, todos: &Vec<TodoItem>) {
 }
 ```
 
-虽然这样写能让程序正常运行, 但也埋下了隐患。
-即, 一旦序列化失败或文件写入失败, 就会导致程序崩溃。
+Although this makes the program run, it also plants a hidden risk:
+as soon as serialization fails or the file write fails, the program crashes.
 
-我们希望即使程序运行出错也可以正常处理, 而不是崩溃。
-因此我们需要引入 Rust 的错误处理机制。
+We want the program to handle problems gracefully even when something goes wrong, instead of crashing.
+So we need to bring in Rust's error handling mechanisms.
 
-Rust 并没有 `try-catch` 机制。
-而是通过枚举 `Result<T, E>` 来显式处理。
-`T` 表示成功的返回值类型, `E` 表示错误类型。
+Rust has no `try-catch` mechanism.
+Instead, it handles errors explicitly through the enum `Result<T, E>`.
+`T` is the type of the successful return value, and `E` is the error type.
 
 ```rust
 enum Result<T, E> {
-    Ok(T),      // 操作成功时, 返回结果 T
-    Err(E),     // 操作失败时, 返回错误类型 E
+    Ok(T),      // on success, returns the result T
+    Err(E),     // on failure, returns the error type E
 }
 ```
 
-### unwrap 和 expect
+### unwrap and expect
 
-我们在 `save_todo_list` 方法中使用了 `unwrap`。它用于从 `Result<T, E>` 中获取值。
+We used `unwrap` in the `save_todo_list` method. It is used to get a value out of a `Result<T, E>`.
 
-- 如果 `Result` 是 `Ok(T)`, 则返回 `T`;
-- 如果 `Result` 是 `Err(E)`, 则程序会崩溃并打印错误信息。
+- If the `Result` is `Ok(T)`, it returns `T`;
+- If the `Result` is `Err(E)`, the program panics and prints the error message.
 
-我们也可以使用 `expect` 方法。它与 `unwrap` 类似, 但它会返回一个自定义的错误信息。
+We can also use the `expect` method. It is similar to `unwrap`, but it returns a custom error message.
 
 ```rust
-let data = serde_json::to_string(todos).expect("序列化失败");
+let data = serde_json::to_string(todos).expect("serialization failed");
 ```
 
-但这两种方法都不推荐在正常程序中使用。因为一旦出错就会导致程序崩溃。
+But neither of these methods is recommended in a normal program, because any error will crash the program.
 
-更加健壮的方法是使用一个 `match` 来处理 `Result<T, E>`。
+A more robust approach is to use a `match` to handle the `Result<T, E>`.
 
 ```rust
 pub fn save_todo_list(save_file: &str, todos: &Vec<TodoItem>) {
@@ -1604,11 +1606,11 @@ pub fn save_todo_list(save_file: &str, todos: &Vec<TodoItem>) {
 }
 ```
 
-这样, 即使出错了, 程序也能继续运行, 并向用户提示错误原因。
+That way, even if something goes wrong, the program keeps running and tells the user why.
 
-### try 运算符
+### The try Operator
 
-Rust 还提供了一个 `?` 运算符, 用于自动传播错误。它避免了我们层层 `match`。
+Rust also provides the `?` operator, used to propagate errors automatically. It saves us from nested `match` statements.
 
 ```rust
 pub fn save_todo_list(save_file: &str, todos: &Vec<TodoItem>) -> Result<(), String> {
@@ -1618,7 +1620,7 @@ pub fn save_todo_list(save_file: &str, todos: &Vec<TodoItem>) -> Result<(), Stri
 }
 ```
 
-可当我们直接运行以上代码时, 编译器会报错。
+But if we run the code above directly, the compiler reports an error.
 
 ```bash
 error[E0277]: `?` couldn't convert the error to `std::string::String`
@@ -1644,28 +1646,28 @@ error[E0277]: `?` couldn't convert the error to `std::string::String`
    = note: required for `Result<(), std::string::String>` to implement `FromResidual<Result<Infallible, serde_json::Error>>`
 ```
 
-这是因为只有当返回类型是 `Result` 且错误一致时, 才能够使用 `?`。
+This is because `?` can only be used when the return type is a `Result` with a matching error.
 
-我们可以看到报错信息: ``` `?` couldn't convert the error to `std::string::String` ``` ,
+We can see the error message: ``` `?` couldn't convert the error to `std::string::String` ``` ,
 
-错误原因是 `save_todo_list` 返回 `Result<(), String>`, 但 `serde_json::to_string(...)` 的错误类型是 `serde_json::Error`,
-? 运算符尝试将 `serde_json::Error` 转换为 `String`, 但 `From<serde_json::Error> for String` 并未实现。
+The reason is that `save_todo_list` returns `Result<(), String>`, while the error type of `serde_json::to_string(...)` is `serde_json::Error`.
+The `?` operator tries to convert `serde_json::Error` into `String`, but `From<serde_json::Error> for String` is not implemented.
 
-于是我们需要对错误进行转换, 使得返回的类型与 `save_todo_list` 函数一致。
+So we need to convert the error so that the returned type matches the `save_todo_list` function.
 
-### 函数闭包
+### Function Closures
 
-我们可以使用闭包来解决这个问题。
+We can solve this problem with closures.
 
-闭包是一种匿名函数, 除了可以接受参数外, 还可以捕获其环境中的变量。
-除此之外, 闭包还可以作为参数传递给函数。
+A closure is an anonymous function that, besides accepting arguments, can also capture variables from its environment.
+On top of that, a closure can be passed to a function as an argument.
 
-语法如下:
+The syntax is as follows:
 
 ```rust
 {
   let x = 5;
-  // 类型标注不是必须的
+  // type annotations are not required
   let add_x = |y: i32| -> i32 {
     return x + y;
   }
@@ -1673,10 +1675,10 @@ error[E0277]: `?` couldn't convert the error to `std::string::String`
 }
 ```
 
-如果只有一个返回表达式, 可以简化为 `let add_x = |y| x + y;`。
+If there is only one return expression, it can be simplified to `let add_x = |y| x + y;`.
 
-认识了闭包之后, 我们就可以改造 `save_todo_list` 了。
-使用 `map_err` 函数, 传递一个闭包, 将可能发生的错误统一转换为 `String` 类型。
+Now that we know about closures, we can rework `save_todo_list`.
+Using the `map_err` function and passing a closure, we uniformly convert any error that may occur into the `String` type.
 
 ```rust
 pub fn save_todo_list(save_file: &str, todos: &Vec<TodoItem>) -> Result<(), String> {
@@ -1686,18 +1688,18 @@ pub fn save_todo_list(save_file: &str, todos: &Vec<TodoItem>) -> Result<(), Stri
 }
 ```
 
-重新运行, 这下就可以正常工作了。
+Running it again, it works properly now.
 
-## 查找 Todo
+## Finding Todos
 
-我们将 `create` 命令功能基本完善了, 它可以使用命令行参数和交互式界面两种方式来创建 Todo 项。
+We have basically completed the functionality of the `create` command: it can create Todo items both from command-line arguments and through the interactive interface.
 
-但是我们的 `list` 命令还相对简陋, 它只能列出所有的 Todo 项, 而无法根据条件筛选 Todo 项。
-因此我们需要完善它。
+But our `list` command is still rather crude: it can only list all Todo items and cannot filter them by condition.
+So we need to improve it.
 
-### 筛选 Todo
+### Filtering Todos
 
-我们将创建一个 `TodoItemFilter` 结构体。用来表示筛选配置。
+We will create a `TodoItemFilter` struct to represent the filter configuration.
 
 ```rust
 pub struct TodoItemFilter {
@@ -1706,12 +1708,12 @@ pub struct TodoItemFilter {
 }
 ```
 
-`TodoItemFilter` 将具有两个属性, 分别代表需要筛选的 `title` 和 `content` 内容。
-因为可能只需要筛选其中一个, 因此将两者均设为 `Option<String>` 属性表示可选的。
+`TodoItemFilter` will have two attributes, representing the `title` and `content` to filter by.
+Since it may be necessary to filter by only one of them, both are set to the optional type `Option<String>`.
 
-接下来我们将为它实现一些方法。
+Next, we will implement some methods for it.
 
-首先是实例化方法。
+First, the instantiation method.
 
 ```rust
 impl TodoItemFilter {
@@ -1724,18 +1726,18 @@ impl TodoItemFilter {
 }
 ```
 
-在一开始, 我们并没有办法知道需要筛选什么内容, 因此将 `title` 和 `content` 均设为 `None`。
+At the beginning we have no way of knowing what needs to be filtered, so both `title` and `content` are set to `None`.
 
-### 泛型约束
+### Generic Bounds
 
-在之前代码中, 我们了解到了用来占位表示任何类型的泛型。
-但仅仅只是一个 `T` 的范围就太大了。例如我们可能需要的参数是一个字符串, 但却可以将数字, 布尔传递进来。
+In the earlier code we learned about generics, which serve as placeholders for any type.
+But a bare `T` covers too wide a range. For example, the argument we need may be a string, yet numbers and booleans could also be passed in.
 
-为解决这个问题, Rust 支持对泛型进行类型约束, 使得泛型参数必须满足特定的条件。
-因此我们需要对泛型进行进一步的约束。
+To solve this, Rust supports adding type bounds to generics, so a generic parameter must satisfy specific conditions.
+Therefore we need to constrain the generic further.
 
-例如, 我们希望参数可以转换为字符串类型, 那么可以使用 `Into<String>` 作为约束条件。
-`Into<String>` 表示“任何可以转换成 `String` 的类型”。
+For example, if we want the argument to be convertible into a string type, we can use `Into<String>` as the bound.
+`Into<String>` means "any type that can be converted into `String`".
 
 ```rust
 impl TodoItemFilter {
@@ -1750,12 +1752,12 @@ impl TodoItemFilter {
 }
 ```
 
-上方代码分别为 `TodoItemFilter` 实现 `set_title` 和 `set_content` 方法。
-我们不关心参数 `T` 具体是什么类型, 只要它满足约束条件 `Into<String>` 就行。
-无论 `T` 是 `String` 类型, 还是 `&str` 类型, 抑或是 `Vec<u8>` 类型, 只要它可以被转换为 `String` 类型, 都可以作为参数传入。
+The code above implements the `set_title` and `set_content` methods for `TodoItemFilter`.
+We do not care what concrete type the argument `T` is, as long as it satisfies the bound `Into<String>`.
+Whether `T` is `String`, `&str`, or `Vec<u8>`, any type that can be converted into `String` can be passed in.
 
-类型约束有两种写法, 上面的是第一种, 直接将约束条件写在泛型参数位置, 更加常用。
-第二种则是使用 `where` 子句单独列出, 适用于复杂约束情况。
+There are two ways to write type bounds. The one above is the first: write the bound directly in the generic parameter position, which is more common.
+The second uses a separate `where` clause, which suits complex bounds.
 
 ```rust
 impl TodoItemFilter {
@@ -1770,12 +1772,12 @@ impl TodoItemFilter {
 }
 ```
 
-### 筛选参数
+### Filter Arguments
 
-我们目前的 Todo 项具有两项属性, 即 `title` 和 `content`。
-我们可以根据这两项属性中的任意一项或两项来筛选 Todo 项。
+Our Todo items currently have two attributes, `title` and `content`.
+We can filter Todo items by either one of these attributes, or by both.
 
-我们为 `TodoItemFilter` 实现一个 `filter` 方法用于过滤 Todo 项。
+Let us implement a `filter` method for `TodoItemFilter` to filter Todo items.
 
 ```rust
 pub fn filter(&self, list: &Vec<TodoItem>) {
@@ -1811,15 +1813,15 @@ pub fn filter(&self, list: &Vec<TodoItem>) {
 }
 ```
 
-以上代码为 `TodoItemFilter` 实现的 `filter` 方法。
-它首先创建一个空的 `filtered_list` 用于存储筛选后的 Todo 项。
-如果 `title` 和 `content` 均为空, 则直接将所有 Todo 项放入 `filtered_list`。
-否则, 遍历所有 Todo 项, 根据 `title` 和 `content` 进行筛选。
-如果 Todo 项的 `title` 和 `content` 均包含筛选条件, 则将其放入 `filtered_list`。
+The code above is the `filter` method implemented for `TodoItemFilter`.
+It first creates an empty `filtered_list` to store the filtered Todo items.
+If both `title` and `content` are empty, all Todo items are put into `filtered_list` directly.
+Otherwise it iterates over all Todo items and filters by `title` and `content`:
+if both the `title` and the `content` of a Todo item contain the filter conditions, the item is put into `filtered_list`.
 
-最后, 遍历 `filtered_list`, 打印出筛选后的 Todo 项。
+Finally it iterates over `filtered_list` and prints the filtered Todo items.
 
-然后我们改造 `TodoCommand` 枚举, 为 `list` 命令增加两个参数。
+Then we rework the `TodoCommand` enum, adding two arguments to the `list` command.
 
 ```rust
 // ...
@@ -1833,7 +1835,7 @@ List {
 // ...
 ```
 
-改造 `main` 函数, 在 `list` 命令中添加筛选参数。
+Rework the `main` function to pass the filter arguments to the `list` command.
 
 ```rust
 // ...
@@ -1846,7 +1848,7 @@ List {
 // ...
 ```
 
-接着改造 `list_todo` 函数。
+Next, rework the `list_todo` function.
 
 ```rust
 pub fn list_todo(todos: &Vec<TodoItem>, title: Option<String>, content: Option<String>) {
@@ -1864,29 +1866,29 @@ pub fn list_todo(todos: &Vec<TodoItem>, title: Option<String>, content: Option<S
 }
 ```
 
-现在, 当我们执行 `cargo run -- list` 命令时, 可以携带 `--title` 和 `--content` 参数进行筛选了。
+Now, when we run `cargo run -- list`, we can pass `--title` and `--content` to filter the results.
 
-## 特征
+## Traits
 
-在为 `list` 命令实现 `set_title` 和 `set_content` 方法时, 我们使用了 `Into<String>` 进行类型约束。
-但 `Into<T>` 并非是类型, 它是一个特征, 是 Rust 用于定义行为约定的一种机制。可以为类型定义统一的能力规范。
+When implementing the `set_title` and `set_content` methods for the `list` command, we used `Into<String>` as a type bound.
+But `Into<T>` is not a type: it is a trait, a mechanism Rust uses to define behavioral contracts. It lets us define a uniform capability specification for types.
 
-我们可以将 Rust 中的特征看作是其他语言中的接口。
+We can think of traits in Rust as interfaces in other languages.
 
-Rust 内置了许多特征。例如 `Into<T>` 表示可以将类型转换为 `T`。`From<T>` 表示可以从 `T` 构造出某个类型。
-`Copy` 和 `Clone` 可以表示一个类型是否可以被复制等等。
+Rust ships with many built-in traits. For example, `Into<T>` means a type can be converted into `T`, `From<T>` means a type can be constructed from `T`,
+and `Copy` and `Clone` can express whether a type can be copied, and so on.
 
-在最开始我们编写程序时就遇到过一个涉及特征的错误。
-`String` 类型没有实现 `Copy` 特征, 因此无法直接将参数赋值。
+When we first wrote our program, we already ran into an error involving a trait.
+The `String` type does not implement the `Copy` trait, so an argument cannot be assigned directly.
 
 ```bash
 6 |   let title = args[1];
   |               ^^^^^^^ move occurs because value has type `String`, which does not implement the `Copy` trait
 ```
 
-### 声明特征
+### Declaring Traits
 
-特征的声明使用 `trait` 关键字。
+Traits are declared with the `trait` keyword.
 
 ```rust
 trait PrintName {
@@ -1894,11 +1896,11 @@ trait PrintName {
 }
 ```
 
-与枚举一样, 特征只要使用了 `pub` 修饰, 那么它的方法就全部可供外部访问。
+Like enums, as long as a trait is marked with `pub`, all of its methods become accessible from outside.
 
-### 实现特征
+### Implementing Traits
 
-特征的实现依赖于类型。在原先的为类型实现方法的基础上增加实现的特征名称和 `for` 关键字。
+Implementing a trait depends on a type. On top of the original form of implementing methods for a type, we add the name of the trait being implemented and the `for` keyword.
 
 ```rust
 trait PrintName {
@@ -1912,16 +1914,16 @@ impl PrintName for TodoItem {
 }
 ```
 
-倘若需要为类型 A 实现特征 B, 那么两者必须有一个是在当前作用域中定义的。否则将无效。
-例如想为 `String` 实现 `Copy` 特征, 但两者都定义在标准库中而不在当前作用域, 因此无法实现。
+If you want to implement trait B for type A, then one of the two must be defined in the current scope, otherwise it will not work.
+For example, if you want to implement the `Copy` trait for `String`, both are defined in the standard library rather than the current scope, so it cannot be done.
 
-这个规则被称为孤儿规则, 它确保了他人编写的代码不会破坏我们的代码, 我们也不会莫名其妙破坏他人的代码。
+This rule is called the orphan rule. It ensures that code written by others cannot break our code, and that we do not inexplicably break other people's code.
 
-### 特征约束
+### Trait Bounds
 
-前面我们使用到了特征约束, 即 `T: Into<String>`。它表示 `T` 必须实现 `Into<String>` 特征。
+Earlier we used a trait bound, namely `T: Into<String>`. It means `T` must implement the `Into<String>` trait.
 
-特征约束不仅可以约束泛型, 也可以约束特征自身。
+Trait bounds constrain not only generics, but also traits themselves.
 
 ```rust
 trait PrintName: Display {
@@ -1929,12 +1931,12 @@ trait PrintName: Display {
 }
 ```
 
-以上代码为 `PrintName` 特征的定义, 它要求实现对象必须实现 `Display` 特征才能实现它。
-可以使用 `+` 号增加更多的约束。例如 `trait PrintName: Display + Clone` 表示 `PrintName` 必须实现 `Display` 和 `Clone` 特征才能实现它。
+The code above defines the `PrintName` trait, requiring that an implementing type must also implement the `Display` trait in order to implement it.
+You can add more bounds with `+`. For example, `trait PrintName: Display + Clone` means `PrintName` requires both `Display` and `Clone` to be implemented.
 
-### 参数约束
+### Argument Bounds
 
-特征也可以用来约束参数类型。
+Traits can also be used to constrain argument types.
 
 ```rust
 trait PrintName: Display {
@@ -1945,21 +1947,21 @@ fn printName(item: &impl PrintName) {
   println!("{}", item.PrintName());
 }
 
-// 以上等价于
+// the above is equivalent to
 
 fn printName<T: PrintName>(item: &T) {
   println!("{}", item.PrintName());
 }
 ```
 
-## 为 TodoItem 实现特征
+## Implementing a Trait for TodoItem
 
-在先前的开发中, 我们为 `TodoItem` 实现了序列化和反序列化方法。这两种方法在开发过程中相当常见。
-我们如果要为每个方法都去实现一遍有点太繁琐了。
+In our earlier work we implemented serialization and deserialization methods for `TodoItem`. These two kinds of methods are quite common in development.
+Implementing them one by one for every type is a bit too tedious.
 
-因此, 我们可以声明一个特征, 从而将这些通用行为给抽离出来。
+So we can declare a trait to extract these common behaviors.
 
-首先定义 `Serializer` 特征表示序列化和反序列化方法集合。然后为 `TodoItem` 实现 `Serializer` 特征。
+First, define a `Serializer` trait representing the set of serialization and deserialization methods. Then implement the `Serializer` trait for `TodoItem`.
 
 ```rust
 pub trait Serializer {
@@ -1978,11 +1980,11 @@ impl Serializer for TodoItem {
 }
 ```
 
-### 默认实现特征
+### Default Trait Implementations
 
-以上代码中, 尽管我们已经将序列化和反序列化方法抽离。但仍然需要手动实现方法体。这依然较为繁琐。
+In the code above, even though we have extracted the serialization and deserialization methods, the method bodies still have to be written by hand, which is still tedious.
 
-因此我们可以使用默认实现来取消手动实现方法体。
+So we can use default implementations to avoid writing the method bodies manually.
 
 ```rust
 pub trait Serializer {
@@ -1998,7 +2000,7 @@ pub trait Serializer {
 impl Serializer for TodoItem {}
 ```
 
-将代码改成以上内容, 然后运行。会发现有报错。我们先解决 `serialize` 方法的报错。
+Change the code to the above and run it. You will find an error. Let us deal with the error in the `serialize` method first.
 
 ```bash
 error[E0277]: the trait bound `Self: Serialize` is not satisfied
@@ -2025,10 +2027,10 @@ help: consider further restricting `Self`
      |                                   +++++++++++++++++++++
 ```
 
-报错内容是 ```the trait bound `Self: Serialize` is not satisfied```。
-这是因为 `Self` 类型没有满足 `serde_json::to_string(self)` 要求的类型约束导致的。
+The error is ```the trait bound `Self: Serialize` is not satisfied```.
+It happens because the `Self` type does not satisfy the type bound required by `serde_json::to_string(self)`.
 
-我们可以查看 `serde_json::to_string` 方法的定义。
+We can look at the definition of the `serde_json::to_string` method.
 
 ```rust
 serde_json::ser
@@ -2038,9 +2040,9 @@ where
 // ...
 ```
 
-可以看见, 它使用了 `where` 子句, 要求 `T` 类型必须实现 `?Sized` 和 `Serialize` 特征。
+As you can see, it uses a `where` clause requiring the type `T` to implement the `?Sized` and `Serialize` traits.
 
-我们将类型约束补上。
+Let us add the missing bounds.
 
 ```rust
 pub trait Serializer
@@ -2059,9 +2061,9 @@ where
 impl Serializer for TodoItem {}
 ```
 
-再次运行, `serialize` 方法不再报错, 现在只剩下 `deserialize` 方法的报错了。
+Run it again: the `serialize` method no longer errors, and only the `deserialize` method is left.
 
-`deserialize` 方法的报错如下:
+The error from the `deserialize` method is as follows:
 
 ```bash
 error[E0277]: the trait bound `Self: Deserialize<'_>` is not satisfied
@@ -2086,11 +2088,11 @@ help: consider further restricting `Self`
      |                                                   +++++++++++++++++++++++++++
 ```
 
-报错信息: ```the trait bound `Self: Deserialize<'_>` is not satisfied``` 可以看见, 也是因为没有满足类型约束导致的。
+The error message ```the trait bound `Self: Deserialize<'_>` is not satisfied``` shows that this too is caused by an unsatisfied type bound.
 
-编译器也有提示我们增加约束。
+The compiler also hints that we should add the bound.
 
-补上约束, 代码如下:
+Add the bound, and the code becomes:
 
 ```rust
 pub trait Serializer
@@ -2107,7 +2109,7 @@ where
 }
 ```
 
-重新运行, `deserialize` 的报错消失了。但出现了新的报错:
+Run it again: the `deserialize` error is gone. But a new error appears:
 
 ```bash
 error[E0637]: `'_` cannot be used here
@@ -2119,18 +2121,17 @@ error[E0637]: `'_` cannot be used here
 For more information about this error, try `rustc --explain E0637`.
 ```
 
-报错信息: ``` `'_` cannot be used here```, 表示这里不能使用 `'_`,
-``` `'_` is a reserved lifetime name``` 提示我们 `'_` 是保留的生命周期名称。
+The error message ``` `'_` cannot be used here``` means `'_` cannot be used here,
+and ``` `'_` is a reserved lifetime name``` tells us that `'_` is a reserved lifetime name.
 
-### 生命周期
+### Lifetimes
 
-生命周期, 通常指某个事物从开始到结束的一个完整的过程。
+A lifetime usually refers to a complete process from the beginning to the end of something.
 
-在 Rust 中, 它是一个编译期概念, 用于检查引用是否合法, 避免悬垂指针等问题。
-通常情况下, 我们不需要手动标注生命周期, 编译器会自动推导。
-只有当编译器无法确定时, 才需要手动标注。
+In Rust it is a compile-time concept, used to check whether references are valid and to avoid problems such as dangling pointers.
+Usually we do not need to annotate lifetimes manually, because the compiler infers them; only when the compiler cannot determine them do we need to annotate.
 
-可以将 Rust 中的生命周期简单的认为就是引用的有效作用域。
+You can simply think of a lifetime in Rust as the valid scope of a reference.
 
 ```rust
 {
@@ -2143,26 +2144,26 @@ For more information about this error, try `rustc --explain E0637`.
 }
 ```
 
-以上代码通过花括号被分为两层, 在第一层, 声明了变量 `r` 但未赋值。
-在第二层, 声明了变量 `n`, 并将 `n` 的地址赋值给 `r`。
+The code above is split into two levels by braces. In the first level, the variable `r` is declared without a value.
+In the second level, the variable `n` is declared and the address of `n` is assigned to `r`.
 
-`n` 是一个局部变量, 它的生命周期在第二层结束, 即花括号结束。
-而 `r` 是一个引用, 它指向 `n`, 它的生命周期在 `r` 所在的作用域内, 即第一层的花括号内。
+`n` is a local variable whose lifetime ends at the end of the second level, that is, when the braces close.
+`r` is a reference pointing to `n`, and its lifetime is within the scope where `r` lives, that is, inside the braces of the first level.
 
-`n` 的生命周期比 `r` 的生命周期短, 这没有问题。但是 `r` 被赋值为 `n` 的引用, 就会导致出问题。
-因为 `n` 会在 `n` 的生命周期结束后被销毁, 而 `r` 指向了一个已经被销毁的变量。
+It is fine that the lifetime of `n` is shorter than that of `r`. But assigning the reference to `n` to `r` causes a problem:
+`n` is destroyed when its lifetime ends, and `r` ends up pointing at an already destroyed variable.
 
-回到新的 `deserialize` 方法报错。`'_` 是一个特殊的生命周期标记。它被用于生命周期省略或临时生命周期标注。
-它可以被编译器自动推导。但在类型约束这里并不被允许。
+Back to the error from the new `deserialize` method. `'_` is a special lifetime marker, used for lifetime elision or for temporary lifetime annotation.
+It can be inferred automatically by the compiler, but it is not allowed in a type bound here.
 
-Rust 要求在类型约束时, 必须手动标注明确的生命周期名称。因为编译器无法在这里推断出具体的生命周期。
+Rust requires an explicit lifetime name in a type bound, because the compiler cannot infer the concrete lifetime there.
 
-我们将 `'_` 替换为 `'a`, 再次运行。
-> 需要注意的是, Rust 的声明周期命名并没有什么特别要求, 只是一般通常使用单个小写字母命名。
+Replace `'_` with `'a` and run again.
+> Note that Rust has no special requirements for lifetime names; by convention a single lowercase letter is usually used.
 
-原先的报错消失了, 新的报错出现了。
+The previous error is gone, and a new one appears.
 
-### 高阶生命周期绑定
+### Higher-Ranked Lifetime Bounds
 
 ```bash
 error[E0261]: use of undeclared lifetime name `'a`
@@ -2186,36 +2187,36 @@ help: consider introducing lifetime `'a` here
    |                     ++++
 ```
 
-还是聚焦报错内容 ```use of undeclared lifetime name `'a` ```, 意思是我们使用了未声明的生命周期。编译器也给出多种解决方法。
+Focusing again on ```use of undeclared lifetime name `'a` ```: it means we used a lifetime that was never declared. The compiler offers several solutions.
 
-以下是几种解决方法的含义:
+Here is what each solution means:
 
 - `Self: Sized + Serialize + for<'a> Deserialize<'a>`:
-  这是最常见通用的写法, 使用了高阶生命周期约束, 表示不论 `'a` 是什么生命周期, `Self` 都能实现特征 `Deserialize<'a>`。
+  This is the most common and general form. It uses a higher-ranked lifetime bound, meaning that whatever lifetime `'a` is, `Self` implements the trait `Deserialize<'a>`.
 
 - `pub trait Serializer<'a>`:
-  这让特征本身携带生命周期参数, 可以在该特征的所有方法中使用, 但会导致使用特征时需要额外传递生命周期, 侵入性较强。
+  This makes the trait itself carry a lifetime parameter that can be used in all of the trait's methods, but it forces callers of the trait to pass a lifetime, which is quite intrusive.
 
 - `for<'a> Self: Sized + Serialize + Deserialize<'a>,`:
-  同样使用了高阶生命周期约束, 但 `'a` 被作用于整个约束条件, 表示不论 `'a` 是什么生命周期都能让类型约束成立。
+  This also uses a higher-ranked lifetime bound, but `'a` applies to the whole bound, meaning the type bound holds for any lifetime `'a`.
 
-我们使用第一种即可。改造完毕后, 再次运行, 这次没有再报错了。
+We will use the first one. After the rework, running it again produces no more errors.
 
-## 验证功能
+## Verifying the Features
 
-到达这一步, 我们已经完成了 Todo CLI 的创建、查看、筛选和持久化功能。
-尽管我们可以手动运行命令行进行验证, 但随着功能越来越多、逻辑越来越复杂, 仅靠人手操作显得既繁琐又容易遗漏。
+At this point we have completed the create, view, filter, and persistence features of the Todo CLI.
+Although we can verify things by running commands by hand, as features multiply and logic grows more complex, manual operation becomes both tedious and easy to overlook.
 
-Rust 提供了强大的内建测试模块, 允许我们通过自动化方式验证功能是否正确, 避免反复手动测试。
+Rust provides a powerful built-in test module, letting us verify features automatically instead of testing them by hand over and over.
 
-### 单元测试
+### Unit Tests
 
-单元测试目标是测试某一个代码单元(一般都是函数), 验证该单元是否能按照预期进行工作,
-例如测试一个 `add` 函数, 验证当给予两个输入时, 最终返回的和是否符合预期。
+A unit test aims to test one code unit (usually a function) and verify that it works as expected.
+For example, testing an `add` function to verify that, given two inputs, the returned sum matches expectations.
 
-我们可以在每个模块中写自己的测试逻辑, 并通过 cargo test 命令批量执行它们。
+We can write our own test logic in each module and run them all in bulk with the `cargo test` command.
 
-Rust 中通常将单元测试代码和被测试代码放在一个文件中。
+In Rust, unit test code and the code under test are usually kept in the same file.
 
 ```rust
 // src/todo/core.rs
@@ -2223,7 +2224,7 @@ Rust 中通常将单元测试代码和被测试代码放在一个文件中。
 // ...
 #[cfg(test)]
 mod tests {
-  // 因为是子模块, 因此需要使用 super 关键字来引用父模块
+  // because this is a submodule, we need the super keyword to reference the parent module
   use super::{Serializer, TodoItem};
 
   #[test]
@@ -2245,12 +2246,12 @@ mod tests {
 }
 ```
 
-以上代码中, 我们添加了两个测试函数:
+In the code above we added two test functions:
 
-- `test_todo_item_creation`: 验证 `TodoItem::new`方法能否正确赋值。
-- `test_serialization_roundtrip`: 验证结构体能否被序列化后再还原回来。
+- `test_todo_item_creation`: verifies that `TodoItem::new` assigns values correctly.
+- `test_serialization_roundtrip`: verifies that the struct can be restored after being serialized.
 
-在 `src/todo/core.rs` 文件中增加以上内容后, 运行 `cargo test` 命令, Rust 就会进行测试了。
+After adding this content to `src/todo/core.rs`, run `cargo test` and Rust will perform the tests.
 
 ```bash
 test todo::core::tests::test_serialization_roundtrip ... ok
@@ -2273,7 +2274,7 @@ failures:
 test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-可以看见 `todo::core::tests::test_todo_item_creation` 方法报错了, 说明内容:
+As you can see, `todo::core::tests::test_todo_item_creation` failed, saying:
 
 ```bash
 assertion `left == right` failed
@@ -2281,9 +2282,9 @@ assertion `left == right` failed
  right: "test"
 ```
 
-意思是断言失败了, 因为两个值不匹配。
-回到测试代码, 把 `let item = TodoItem::new("test1", "content");` 中写错的 `test1` 改为 `test`。
-重新运行 `cargo test` 命令, 结果如下:
+The assertion failed because the two values do not match.
+Going back to the test code, change the mistyped `test1` in `let item = TodoItem::new("test1", "content");` to `test`.
+Run `cargo test` again, and the result is:
 
 ```bash
 running 2 tests
@@ -2293,220 +2294,225 @@ test todo::core::tests::test_serialization_roundtrip ... ok
 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-说明我们的测试全部通过, 功能符合预期。
+This shows that all our tests pass and the features behave as expected.
 
-### 断言
+### Assertions
 
-断言是指在程序中设置检查点, 当程序执行到这些检查点时, 会对程序的状态进行检查。
-如果检查结果为真, 程序继续执行；如果检查结果为假, 程序会抛出异常, 终止执行。
+An assertion is a checkpoint set in a program: when execution reaches it, the state of the program is checked.
+If the check is true, the program continues; if it is false, the program throws an exception and stops.
 
-Rust 中常用的断言有以下几种:
+Rust commonly uses the following assertions:
 
-- `assert!(expr)`: 如果 `expr` 为假, 抛出异常。
-- `assert_eq!(left, right)`: 如果 `left` 不等于 `right`, 抛出异常。
-- `assert_ne!(left, right)`: 如果 `left` 等于 `right`, 抛出异常。
+- `assert!(expr)`: throws an exception if `expr` is false.
+- `assert_eq!(left, right)`: throws an exception if `left` does not equal `right`.
+- `assert_ne!(left, right)`: throws an exception if `left` equals `right`.
 
-如果加上 `debug_` 前缀, 则只在 `Debug` 模式运行, 如 `debug_assert!(expr)`。
+If you add a `debug_` prefix, it only runs in `Debug` mode, for example `debug_assert!(expr)`.
 
-### 条件编译
+### Conditional Compilation
 
-在测试部分的代码中, 我们可以看见在模块 `tests` 上的 `#[cfg(test)]`。
+In the test code we can see `#[cfg(test)]` on the `tests` module.
 
-它用于进行条件编译。表示 `tests` 的代码仅在满足 `test` 条件时进行编译。
-即只在 `cargo test` 命令执行时才会编译。
+It is used for conditional compilation. It means the code of `tests` is compiled only when the `test` condition is met,
+that is, only when the `cargo test` command is executed.
 
-除了 `test` 条件外, 我们还可以增加更多的条件, 例如:
+Besides the `test` condition, we can add more conditions, for example:
 
-- `#[cfg(all(target_os="windows", test))]` 表示仅在编译对象为 `windows` 平台时运行 `cargo test` 编译。
-- `#[cfg(all(any(target_os = "ios", target_os = "android"), test))]` 表示仅在编译对象为移动端时运行 `cargo test` 编译。
-- `#[cfg(all(not(any(target_os = "ios", target_os = "android")), test))]` 表示仅在编译对象非移动端时运行 `cargo test` 编译。
+- `#[cfg(all(target_os="windows", test))]` compiles `cargo test` only when the compilation target is the `windows` platform.
+- `#[cfg(all(any(target_os = "ios", target_os = "android"), test))]` compiles `cargo test` only when the compilation target is mobile.
+- `#[cfg(all(not(any(target_os = "ios", target_os = "android")), test))]` compiles `cargo test` only when the compilation target is not mobile.
 
-条件编译可以用在许多地方, 小到一个变量, 大到一个模块都可以使用条件编译。
+Conditional compilation can be used in many places, from a single variable to a whole module.
 
-## 总结
+## Summary
 
-通过本文的学习, 我们不仅迈出了 Rust 编程的第一步, 更通过亲手实现一个 Todo CLI, 将理论知识转化为实际应用能力。
-从最初的 “Hello, world!” 输出, 到最终能通过命令行创建、列出 Todo 项并实现数据持久化, 我们逐步掌握了 Rust 从基础语法到核心特性的关键知识点。
+Through this tutorial we not only took our first step in Rust programming, but turned theory into practical ability by building a Todo CLI by hand.
+From the initial "Hello, world!" output to a program that can create and list Todo items from the command line with data persistence, we gradually mastered the key knowledge points of Rust, from basic syntax to its core features.
 
-在这个过程中, 我们深入理解了 Rust 区别于其他语言的核心设计:
+Along the way we gained a deep understanding of the design that sets Rust apart from other languages:
 
-- 所有权系统通过严格的内存管理规则避免悬垂指针和重复释放问题。
-- 借用与生命周期机制确保引用的有效性。
-- 特征与泛型则实现了灵活的代码抽象与复用。
+- The ownership system avoids dangling pointers and double frees through strict memory management rules.
+- Borrowing and lifetimes ensure that references are valid.
+- Traits and generics enable flexible code abstraction and reuse.
 
-同时, 我们也实践了 Rust 工程化开发的关键环节。
-使用 cargo 管理项目与依赖、通过模块化拆分代码结构。
-借助 `serde` 和 `clap` 等第三方库提升开发效率, 以及通过单元测试保障代码质量。
+At the same time, we practiced the key parts of engineering with Rust:
+using cargo to manage the project and its dependencies, splitting the code structure into modules,
+leveraging third-party libraries such as `serde` and `clap` to boost development efficiency, and guaranteeing code quality with unit tests.
 
-然而, 当前的 Todo CLI 仍有较大优化空间:
+That said, the current Todo CLI still has plenty of room for improvement:
 
-目前的功能仅支持 create（创建）和 list（列表）两个命令, 缺乏对 Todo 项的删除和修改功能, 无法应对日常使用中 “任务变更” 的场景。
+It only supports the create and list commands, lacking the ability to delete and modify Todo items, so it cannot handle the "task changed" situations of daily use.
 
-Todo 项数据仅包含标题和内容, 缺少状态标记（如 “已完成”“未完成”）, 难以跟踪任务进度。
+Todo items only contain a title and content, without a status marker (such as "done" and "not done"), which makes task progress hard to track.
 
-此外, 命令行交互的容错性、筛选功能的精细化（如按状态筛选）等细节也有待完善。
+In addition, details such as fault tolerance in the command-line interaction and more finely grained filtering (for example, filtering by status) remain to be improved.
 
-但这些不足恰恰是深入学习的契机。
+But these shortcomings are exactly the opportunity for deeper learning.
 
-我们可以尝试通过扩展功能、优化实现, 我们可以进一步巩固 Rust 的模式匹配、错误处理、枚举设计等知识点。
-真正将 “内存安全”“高性能” 的特性融入实际开发中, 让这个简单的工具逐渐成长为一个实用、健壮的生产力工具。
+By extending the features and optimizing the implementation, we can further consolidate our knowledge of Rust pattern matching, error handling, enum design, and more.
+Truly weaving the "memory safety" and "high performance" characteristics into real development lets this simple tool gradually grow into a practical, robust productivity tool.
 
-## 其他语言的实现
+## Implementations in Other Languages
 
-同一个 Todo CLI, 仓库中还提供了 Go、Python 与 TypeScript 三份等价实现,
-分别位于 `golang/`、`python/` 与 `typescript/` 目录下。
+The same Todo CLI is also provided in three equivalent implementations: Go, Python, and TypeScript,
+located in the `golang/`, `python/`, and `typescript/` directories respectively.
 
-这些实现尽可能与 Rust 版本保持相同的目录结构、函数与结构体命名以及执行流程,
-并使用与 Rust 版本完全相同的 `todo.json` 格式, 四种实现可以互相读写同一份数据。
+These implementations follow the Rust version as closely as possible in directory structure, function and struct naming, and execution flow,
+and they use exactly the same `todo.json` format as the Rust version, so all four implementations can read and write the same data.
 
-### 目录结构
+### Directory Structure
 
-Go 版本的目录结构如下:
+The Go version has the following directory structure:
 
 ```sh
-# golang 目录结构
-- go.mod                    # 对应 Cargo.toml
+# golang directory structure
+- go.mod                    # corresponds to Cargo.toml
 - src
-  - main.go                 # 对应 src/main.rs
+  - main.go                 # corresponds to src/main.rs
   - todo
-    - todo.go               # 对应 src/todo.rs, 仅声明子模块
+    - todo.go               # corresponds to src/todo.rs, only declares submodules
     - core
-      - core.go             # 对应 src/todo/core.rs
-      - core_test.go        # 对应 src/todo/core.rs 中的 #[cfg(test)] mod tests
+      - core.go             # corresponds to src/todo/core.rs
+      - core_test.go        # corresponds to #[cfg(test)] mod tests in src/todo/core.rs
     - create
-      - create.go           # 对应 src/todo/create.rs
+      - create.go           # corresponds to src/todo/create.rs
     - list
-      - list.go             # 对应 src/todo/list.rs
+      - list.go             # corresponds to src/todo/list.rs
     - storage
-      - storage.go          # 对应 src/todo/storage.rs
+      - storage.go          # corresponds to src/todo/storage.rs
 ```
 
-Python 版本的目录结构如下。Python 中目录本身就是一个包,
-因此 `todo/__init__.py` 相当于只做模块声明的 `src/todo.rs`:
+The Python version has the following directory structure. In Python a directory is itself a package,
+so `todo/__init__.py` is the equivalent of `src/todo.rs`, which only declares modules:
 
 ```sh
-# python 目录结构
-- pyproject.toml            # 对应 Cargo.toml
+# python directory structure
+- pyproject.toml            # corresponds to Cargo.toml
 - src
-  - main.py                 # 对应 src/main.rs
+  - main.py                 # corresponds to src/main.rs
   - todo
-    - __init__.py           # 对应 src/todo.rs, 声明子模块
-    - core.py               # 对应 src/todo/core.rs, 含内联单元测试
-    - create.py             # 对应 src/todo/create.rs
-    - list.py               # 对应 src/todo/list.rs
-    - storage.py            # 对应 src/todo/storage.rs
+    - __init__.py           # corresponds to src/todo.rs, declares submodules
+    - core.py               # corresponds to src/todo/core.rs, includes inline unit tests
+    - create.py             # corresponds to src/todo/create.rs
+    - list.py               # corresponds to src/todo/list.rs
+    - storage.py            # corresponds to src/todo/storage.rs
 ```
 
-TypeScript 版本的目录结构如下。TypeScript 同样没有模块声明文件,
-`todo/todo.ts` 通过命名空间重导出承担 `src/todo.rs` 的职责:
+The TypeScript version has the following directory structure. TypeScript likewise has no module declaration file,
+and `todo/todo.ts` takes on the role of `src/todo.rs` through namespace re-exports:
 
 ```sh
-# typescript 目录结构
-- package.json              # 对应 Cargo.toml
-- tsconfig.json             # 编译器配置
+# typescript directory structure
+- package.json              # corresponds to Cargo.toml
+- tsconfig.json             # compiler configuration
 - src
-  - main.ts                 # 对应 src/main.rs
+  - main.ts                 # corresponds to src/main.rs
   - todo
-    - todo.ts               # 对应 src/todo.rs, 声明子模块
-    - core.ts               # 对应 src/todo/core.rs
-    - core.test.ts          # 对应 src/todo/core.rs 中的 #[cfg(test)] mod tests
-    - create.ts             # 对应 src/todo/create.rs
-    - list.ts               # 对应 src/todo/list.rs
-    - storage.ts            # 对应 src/todo/storage.rs
+    - todo.ts               # corresponds to src/todo.rs, declares submodules
+    - core.ts               # corresponds to src/todo/core.rs
+    - core.test.ts          # corresponds to #[cfg(test)] mod tests in src/todo/core.rs
+    - create.ts             # corresponds to src/todo/create.rs
+    - list.ts               # corresponds to src/todo/list.rs
+    - storage.ts            # corresponds to src/todo/storage.rs
 ```
 
-### 运行与测试
+### Running and Testing
 
 ```bash
-# Go 实现, 需要 go 1.27 及以上 (SetTitle 中的泛型方法对应 Rust 的泛型参数)
+# Go implementation, requires go 1.27 or later (the generic method in SetTitle corresponds to Rust's generic parameters)
 cd golang
 go run ./src --help
 go run ./src create --title t --content c
 go run ./src list --title rust
-go test ./...           # 单元测试
-go build -o cli ./src   # 构建二进制
+go test ./...           # unit tests
+go build -o cli ./src   # build the binary
 
-# Python 实现, 需要 python 3.10 及以上 (联合类型与 match 语句)
+# Python implementation, requires python 3.10 or later (union types and match statements)
 cd python
 python3 src/main.py --help
 python3 src/main.py create --title t --content c
 python3 src/main.py list --title rust
-python3 src/todo/core.py                      # 单元测试
-PYTHONPATH=src python3 -m unittest todo.core  # 也可以用 unittest 运行
+python3 src/todo/core.py                      # unit tests
+PYTHONPATH=src python3 -m unittest todo.core  # can also be run with unittest
 
-# TypeScript 实现, 需要 node 23.6 及以上 (原生支持直接运行 TypeScript)
+# TypeScript implementation, requires node 23.6 or later (native support for running TypeScript directly)
 cd typescript
 node src/main.ts --help
 node src/main.ts create --title t --content c
 node src/main.ts list --title rust
-node --test src/todo/core.test.ts   # 单元测试 (npm test)
-npm run typecheck                   # 类型检查 (需要先执行 npm install)
+node --test src/todo/core.test.ts   # unit tests (npm test)
+npm run typecheck                   # type checking (run npm install first)
 ```
 
-三份实现都支持与 Rust 版本相同的参数形式: `-t/--title`、`-c/--content`、`--title=value`,
-以及 `--help`、`--version` 与 `help` 子命令。
+All three implementations support the same argument forms as the Rust version: `-t/--title`, `-c/--content`, `--title=value`,
+as well as `--help`, `--version`, and the `help` subcommand.
 
-### 与 Rust 的对照
+### Comparison with Rust
 
 | Rust | Go | Python | TypeScript |
 | --- | --- | --- | --- |
 | `struct Program` + `Program::parse()` | `Program` + `(*Program).Parse()` | `Program` + `Program.parse()` | `Program` + `Program.parse()` |
-| `enum TodoCommand` 变体携带数据 | `TodoCommand{Command, Title, Content}` | `Create` 与 `List` 数据类组成的联合类型 | 带判别字段 `kind` 的联合类型 |
-| `Option<String>` | `*string` (nil 即 None) | `str \| None` | `string \| null` |
-| `struct TodoItem` + serde 派生宏 | `TodoItem` + json 标签 | `@dataclass TodoItem` | `class TodoItem` + `JSON.stringify` |
+| `enum TodoCommand` variants carrying data | `TodoCommand{Command, Title, Content}` | union type made of the `Create` and `List` data classes | union type with a discriminant field `kind` |
+| `Option<String>` | `*string` (nil means None) | `str \| None` | `string \| null` |
+| `struct TodoItem` + serde derive macro | `TodoItem` + json tags | `@dataclass TodoItem` | `class TodoItem` + `JSON.stringify` |
 | `TodoItem::new` / `create_todo_item` | `NewTodoItem` / `CreateTodoItem` | `TodoItem.new` / `create_todo_item` | `TodoItem.new` / `createTodoItem` |
-| `trait Serializer` 的默认实现 | `Serializer` 接口 + `Deserialize[T]` 泛型函数 | `Serializer` 抽象基类 + 继承 | `Serializer` 抽象基类 + `extends` |
-| `match args.command { .. }` | `switch program.Command.Command` | `match program.command: case Create(..)` | `switch (command.kind)` 加解构 |
+| default implementation of the `trait Serializer` | `Serializer` interface + generic function `Deserialize[T]` | `Serializer` abstract base class + inheritance | `Serializer` abstract base class + `extends` |
+| `match args.command { .. }` | `switch program.Command.Command` | `match program.command: case Create(..)` | `switch (command.kind)` with destructuring |
 | `create_todo(&mut todos, ..)` | `CreateTodo(&todos, ..)` | `create_todo(todos, ..)` | `createTodo(todos, ..)` |
 | `set_title<T: Into<String>>` | `SetTitle[T ~string]` | `set_title(title: str)` | `setTitle(title: string)` |
-| `save_todo_list` 返回 `Result<(), String>` | 返回 `error` | 抛出 `OSError` | 抛出异常 |
-| `#[cfg(test)] mod tests` | `core_test.go` | `core.py` 中内联的 `TodoItemTest` | `core.test.ts` |
+| `save_todo_list` returns `Result<(), String>` | returns `error` | throws `OSError` | throws an exception |
+| `#[cfg(test)] mod tests` | `core_test.go` | inline `TodoItemTest` in `core.py` | `core.test.ts` |
 
-### 实现要点
+### Implementation Notes
 
-三者的类型系统并不相同, 因此转换时做了如下取舍:
+The type systems of the three languages differ, so the following trade-offs were made when porting:
 
-- 枚举: Rust 的枚举变体可以携带数据, Go 没有枚举, 因此使用类型常量配合一个结构体表示;
-  Python 用一个数据类表示一个变体, 再用联合类型表示整个枚举, 并在 `main` 中用 `match` 语句解构;
-  TypeScript 使用带判别字段的联合类型 (discriminated union), 在 `main` 中通过 `switch` 加解构对应模式匹配。
-- 可选值: `Option<String>` 在 Go 中对应 `*string`, 在 Python 中对应 `str | None`, 在 TypeScript 中对应 `string | null`。
-- 特征: Rust 的 trait 可以为类型提供默认实现, Go 的接口不能, 因此 Go 中用接口约束类型,
-  再用泛型函数 `Deserialize[T]` 提供默认实现; Python 与 TypeScript 的抽象基类可以直接给出默认实现, 对应得最自然。
-- 错误处理: `save_todo_list` 返回的 `Result<(), String>` 在 Go 中对应 `error`, 在 Python 与 TypeScript 中对应异常。
-- 命令行解析: 三者都没有 clap 的派生宏, 因此手动实现了解析 `-t/--title` 等参数的逻辑,
-  并保持帮助文案与退出码 (`--help` 退出 0, 参数错误退出 2) 与 clap 一致。
-- 序列化: 三者都使用与 `serde_json` 相同的紧凑格式 (`,` 与 `:` 后不加空格, 非 ASCII 字符不转义),
-  因此写出的 `todo.json` 与 Rust 版本逐字节一致。
+- Enums: Rust enum variants can carry data, while Go has no enums, so a type constant together with a struct is used instead;
+  Python represents one variant with a data class and the whole enum with a union type, destructuring it with a `match` statement in `main`;
+  TypeScript uses a discriminated union and matches patterns in `main` with `switch` plus destructuring.
+- Optional values: `Option<String>` maps to `*string` in Go, `str | None` in Python, and `string | null` in TypeScript.
+- Traits: a Rust trait can provide default implementations for a type, but a Go interface cannot, so Go constrains types with an interface
+  and provides default implementations through the generic function `Deserialize[T]`; Python and TypeScript abstract base classes can give default implementations directly, which maps most naturally.
+- Error handling: the `Result<(), String>` returned by `save_todo_list` maps to `error` in Go, and to exceptions in Python and TypeScript.
+- Command-line parsing: none of the three has clap's derive macro, so the logic for parsing arguments such as `-t/--title` is implemented by hand,
+  keeping the help text and exit codes consistent with clap (`--help` exits with 0, an argument error exits with 2).
+- Serialization: all three use the same compact format as `serde_json` (no spaces after `,` and `:`, non-ASCII characters not escaped),
+  so the `todo.json` they write is byte-for-byte identical to the Rust version.
 
-各语言额外需要处理的问题:
+Issues each language needed to handle additionally:
 
-- Go: 没有枚举与可选值, 因此用类型常量加结构体、用指针表达 `Option`; 没有 trait 的默认方法,
-  因此用接口约束类型、用泛型函数提供默认实现。
-- Python: 没有“多行输入”原语, 使用 `input()` 读取;
-  同时 `list`、`filter` 是内置名称, 作为参数名会遮蔽它们, 因此重命名为 `todos`、`item_filter`。
-- TypeScript: 类型在运行时会被擦除, 因此 `storage.ts` 中显式校验了字段类型,
-  才能在数据不合法时像 serde 那样打印 `parse file error`;
-  Node 读取标准输入通常是异步的, 为了保持 `create_todo` 的同步流程,
-  `create.ts` 中使用 `fs.readSync` 并自行维护缓冲区按行切分。
+- Go: it has no enums and no optional values, so type constants plus a struct and pointers are used to express `Option`; and since it has no default trait methods,
+  an interface constrains the type while a generic function provides the default implementation.
+- Python: it has no "multi-line input" primitive, so `input()` is used to read;
+  also, `list` and `filter` are built-in names, and using them as parameter names would shadow them, so they were renamed to `todos` and `item_filter`.
+- TypeScript: types are erased at runtime, so `storage.ts` explicitly validates field types
+  in order to print `parse file error` like serde does when the data is invalid;
+  reading standard input in Node is usually asynchronous, so to keep the synchronous flow of `create_todo`,
+  `create.ts` uses `fs.readSync` and maintains its own buffer, splitting it by line.
 
-三处有意为之的差异:
+Three intentional differences:
 
-- Python 使用 `input()` 读取输入, 它不含行尾的换行符, 因此空白行会重新提示输入
-  (Rust 的 `read_line` 会保留换行符, 使得该判断实际上只在读取到结尾时成立)。
-- Go 与 TypeScript 保留了 Rust 的按行读取语义 (包含换行符, 空白行会得到空字符串),
-  但读取到输入结尾时不再像 Rust 那样空转, 而是与 `.expect("read line failed")` 一致地抛出异常/错误。
-- Go 与 Python 中都存在会遮蔽内置名称的标识符 (`list`、`filter`), 已重命名; TypeScript 中无需重命名, 保留了 Rust 的原始名称。
+- Python uses `input()` to read input, which does not include the trailing newline, so blank lines prompt for input again
+  (Rust's `read_line` keeps the newline, which means that check in practice only holds when the end of input is reached).
+- Go and TypeScript keep Rust's line-reading semantics (newline included, a blank line yields an empty string),
+  but they no longer spin like Rust when the end of input is reached; instead they raise an exception/error, consistent with `.expect("read line failed")`.
+- Go and Python both have identifiers that would shadow built-in names (`list`, `filter`), which were renamed; TypeScript needs no renaming and keeps Rust's original names.
 
-> 注意: 各实现的数据文件同样是当前工作目录下的 `todo.json`,
-> 因此在 `golang/`、`python/` 或 `typescript/` 目录下运行会生成该目录下的 `todo.json` (与仓库根目录的那份互不影响)。
+> Note: each implementation also stores its data file as `todo.json` in the current working directory,
+> so running inside `golang/`, `python/`, or `typescript/` writes a `todo.json` in that directory (independent of the one in the repository root).
 
-## 参考内容
+## References
 
-- [锈书](https://rusty.course.rs/)
-- [Rust 官网](https://www.rust-lang.org/)
-- [Rust 参考手册](https://doc.rust-lang.org/stable/reference/introduction.html)
-- [Rust 语言圣经](https://course.rs/about-book.html)
-- [通过例子学习 Rust](https://doc.rust-lang.org/rust-by-example/)
-- [100个练习题学习 Rust](https://colobu.com/rust100/)
-- [Rust 程序设计语言 中文版](https://rustwiki.org/zh-CN/book/title-page.html)
-- [Rust 高级编程 2018 - 中文译本](https://learnku.com/docs/nomicon/2018)
+- [The Rust Book (Chinese)](https://rusty.course.rs/)
+- [Official Rust Website](https://www.rust-lang.org/)
+- [The Rust Reference](https://doc.rust-lang.org/stable/reference/introduction.html)
+- [Rust Language Bible (Chinese)](https://course.rs/about-book.html)
+- [Rust by Example](https://doc.rust-lang.org/rust-by-example/)
+- [Learn Rust with 100 Exercises (Chinese)](https://colobu.com/rust100/)
+- [The Rust Programming Language, Chinese Edition](https://rustwiki.org/zh-CN/book/title-page.html)
+- [Rust Nomicon 2018, Chinese Translation](https://learnku.com/docs/nomicon/2018)
+
+---
+
+[English](README.md) | [中文](README-zh.md)
+
